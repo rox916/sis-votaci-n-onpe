@@ -1,0 +1,76 @@
+import { useEffect } from "react";
+import { Trash2, X } from "lucide-react";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
+
+export default function UsuarioEliminar({ isOpen, onClose, onConfirm, user }) {
+  // Bloquear el scroll del body cuando el modal está abierto
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => (document.body.style.overflow = "");
+  }, [isOpen]);
+
+  if (!isOpen || !user) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      {/* Fondo oscuro sin cierre accidental */}
+      <div className="fixed inset-0 bg-black/40" />
+
+      {/* Contenedor principal con animación */}
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="relative bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 z-[10000]"
+      >
+        {/* Encabezado con botón de cierre */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+          title="Cerrar"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Contenido principal */}
+        <div className="text-center mt-2">
+          <div className="flex justify-center mb-4">
+            <div className="bg-red-100 p-3 rounded-full">
+              <Trash2 className="w-8 h-8 text-red-600" />
+            </div>
+          </div>
+          <h2 className="text-lg font-bold text-[#1A2C56] mb-2">
+            ¿Eliminar Usuario?
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Estás a punto de eliminar al usuario{" "}
+            <span className="font-semibold text-gray-800">{user.nombre}</span>.
+            <br />
+            Esta acción <span className="font-semibold text-red-600">no se puede deshacer</span>.
+          </p>
+        </div>
+
+        {/* Botones */}
+        <div className="flex justify-center gap-3 pt-4 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" /> Eliminar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

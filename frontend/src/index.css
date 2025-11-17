@@ -1,0 +1,219 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- Tu regla 'body' --- */
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-800;
+  }
+}
+
+/*
+========================================
+REGLAS DE ACCESIBILIDAD
+========================================
+*/
+
+/* --- 1. TAMAÑO DE TEXTO --- */
+html.text-size-md {
+  font-size: 16px;
+}
+html.text-size-lg {
+  font-size: 18px;
+}
+html.text-size-xl {
+  font-size: 20px;
+}
+
+/* --- 2. MODO OSCURO (Baja Visión) --- */
+@layer base {
+
+  /* Fondo principal "más oscurito" */
+  html.modo-oscuro body,
+  html.modo-oscuro section,
+  html.modo-oscuro footer {
+    @apply bg-[#121212] text-[#E0E0E0];
+  }
+
+  /* Títulos */
+  html.modo-oscuro h1,
+  html.modo-oscuro h2,
+  html.modo-oscuro h3,
+  html.modo-oscuro h4,
+  html.modo-oscuro h5,
+  html.modo-oscuro h6 {
+    @apply text-white;
+  }
+
+  /* ¡REGLA PRINCIPAL PARA CARDS Y FONDOS CLAROS! */
+  html.modo-oscuro .bg-white,
+  html.modo-oscuro .bg-gray-50,
+  html.modo-oscuro .bg-gray-100,
+  html.modo-oscuro .bg-blue-50,
+  html.modo-oscuro .bg-blue-100,
+  html.modo-oscuro .bg-orange-50,
+  html.modo-oscuro .bg-orange-100,
+  html.modo-oscuro .bg-gradient-to-br,
+  html.modo-oscuro .bg-gradient-to-b,
+  html.modo-oscuro .bg-gradient-to-r,
+  html.modo-oscuro .bg-gradient-to-l,
+  html.modo-oscuro .from-white,
+  html.modo-oscuro .from-gray-50,
+  html.modo-oscuro .from-gray-100,
+  html.modo-oscuro .from-blue-50,
+  html.modo-oscuro .from-blue-100,
+  html.modo-oscuro .to-white,
+  html.modo-oscuro .to-gray-50,
+  html.modo-oscuro .to-gray-100,
+  html.modo-oscuro .to-blue-50,
+  html.modo-oscuro .to-blue-100,
+  html.modo-oscuro .from-\[\#F8FAFC\],
+  html.modo-oscuro .from-\[\#F1F5F9\],
+  html.modo-oscuro .to-\[\#E2E8F0\],
+  html.modo-oscuro .bg-\[\#F8FAFC\],
+  html.modo-oscuro .bg-\[\#F1F5F9\],
+  html.modo-oscuro nav {
+    @apply bg-[#1E1E1E] text-[#E0E0E0] border-[#444];
+    background-image: none !important;
+  }
+
+  /* Cards y contenedores específicos */
+  html.modo-oscuro .rounded-xl,
+  html.modo-oscuro .rounded-2xl,
+  html.modo-oscuro .rounded-3xl {
+    @apply bg-[#1E1E1E] text-[#E0E0E0];
+  }
+
+  /* Asegurar que los cards con clases específicas también se vuelvan negros */
+  html.modo-oscuro [class*="shadow-"],
+  html.modo-oscuro [class*="border-"] {
+    @apply border-[#444];
+  }
+
+  /* Texto oscuro genérico */
+  html.modo-oscuro .text-slate-900,
+  html.modo-oscuro .text-gray-800,
+  html.modo-oscuro .text-gray-700 {
+    @apply text-[#E0E0E0];
+  }
+
+  /* Texto gris claro (ej. subtítulos) */
+  html.modo-oscuro .text-gray-500,
+  html.modo-oscuro .text-gray-600 {
+    @apply text-[#9E9E9E];
+  }
+
+
+
+  /* Evitar que imágenes y SVGs se rompan */
+  html.modo-oscuro img, 
+  html.modo-oscuro svg {
+    @apply bg-transparent;
+    color: inherit;
+  }
+
+  /* Mantener los colores azules seguros */
+  html.modo-oscuro .text-blue-100,
+  html.modo-oscuro .text-blue-200 {
+    @apply text-[#90CAF9];
+  }
+
+  /* Asegurar bordes visibles en modo oscuro */
+  html.modo-oscuro .border-gray-200,
+  html.modo-oscuro .border-gray-100 {
+    @apply border-[#444];
+  }
+}
+
+/* --- 3. MODO DALTONISMO (Tema Crema/Azul/Naranja) --- */
+@layer base {
+
+  /* Fondo principal */
+  html.highlight-links body,
+  html.highlight-links section,
+  html.highlight-links footer {
+    @apply bg-[#FEFBF6] text-[#4C4A47];
+  }
+
+  /* Fondos de "tarjetas" (Navbar, modales, etc.) */
+  html.highlight-links .bg-white,
+  html.highlight-links .bg-gray-50,
+  html.highlight-links nav,
+  html.highlight-links .bg-gradient-to-br.from-white.to-gray-50,
+  html.highlight-links .bg-gradient-to-b,
+  html.highlight-links .bg-gradient-to-r,
+  html.highlight-links .rounded-xl,
+  html.highlight-links .rounded-2xl,
+  html.highlight-links .rounded-3xl {
+    @apply bg-[#FFF7ED] text-[#4C4A47] border-[#F3D9A5];
+    background-image: none !important;
+  }
+
+  /* Textos oscuros */
+  html.highlight-links .text-slate-900,
+  html.highlight-links .text-gray-800,
+  html.highlight-links .text-gray-700 {
+    @apply text-[#4C4A47];
+  }
+
+  /* Textos grises */
+  html.highlight-links .text-gray-500,
+  html.highlight-links .text-gray-600 {
+    @apply text-[#7B7874];
+  }
+
+  /* MANTENER AZULES (Seguros) */
+  html.highlight-links .text-blue-600,
+  html.highlight-links .text-\[\#1E3A8A\],
+  html.highlight-links .text-\[\#2563EB\] {
+    color: #005A9C !important;
+  }
+
+  html.highlight-links .bg-blue-600,
+  html.highlight-links .bg-\[\#2563EB\],
+  html.highlight-links .from-blue-500.to-indigo-600 {
+    background-color: #005A9C !important;
+    background-image: linear-gradient(to right, #005A9C, #004B8D) !important;
+    @apply text-white;
+  }
+
+  html.highlight-links .hover\:bg-blue-700:hover,
+  html.highlight-links .hover\:bg-\[\#1E40AF\]:hover {
+    background-color: #003D69 !important;
+    background-image: none !important;
+  }
+
+  /* REGLAS PARA CATEGORIAS.JSX (Verde -> Naranja) */
+  html.highlight-links .from-green-500.to-green-600 {
+    background-image: linear-gradient(to bottom right, #f97316, #ea580c) !important;
+  }
+
+  html.highlight-links .text-green-700 { 
+    color: #c2410c !important; 
+  }
+
+  html.highlight-links .bg-green-100 { 
+    background-color: #ffedd5 !important; 
+  }
+
+  html.highlight-links .border-green-300 { 
+    border-color: #fdba74 !important; 
+  }
+
+  html.highlight-links .from-green-50.to-emerald-50 {
+    background-image: linear-gradient(to bottom right, #fff7ed, #ffedd5) !important;
+  }
+
+  /* REGLAS PARA CATEGORIAS.JSX (Morado -> Amarillo) */
+  html.highlight-links .from-purple-500.to-purple-600 {
+    background-image: linear-gradient(to bottom right, #f59e0b, #d97706) !important;
+  }
+
+  /* Arreglo para Imágenes/Iconos */
+  html.highlight-links img,
+  html.highlight-links svg {
+    @apply bg-transparent;
+    color: inherit;
+  }
+}
