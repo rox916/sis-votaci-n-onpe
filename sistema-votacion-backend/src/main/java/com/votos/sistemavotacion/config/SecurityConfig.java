@@ -41,12 +41,25 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "http://127.0.0.1:5173",
-                "http://127.0.0.1:3000"
-        ));
+        // Obtener origen permitido desde variable de entorno o usar localhost por defecto
+        String allowedOrigin = System.getenv("FRONTEND_URL");
+        if (allowedOrigin != null && !allowedOrigin.isEmpty()) {
+            config.setAllowedOrigins(Arrays.asList(
+                    allowedOrigin,
+                    "http://localhost:5173",
+                    "http://localhost:3000",
+                    "http://127.0.0.1:5173",
+                    "http://127.0.0.1:3000"
+            ));
+        } else {
+            config.setAllowedOrigins(Arrays.asList(
+                    "http://localhost:5173",
+                    "http://localhost:3000",
+                    "http://127.0.0.1:5173",
+                    "http://127.0.0.1:3000",
+                    "*" // Permitir todos en desarrollo/producción si no se especifica
+            ));
+        }
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("*"));
