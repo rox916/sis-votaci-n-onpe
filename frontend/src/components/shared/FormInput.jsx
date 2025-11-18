@@ -44,3 +44,21 @@ export function FormSelect({ label, options, ...props }) {
   );
 }
 
+/**
+ * Componente TextArea reutilizable con label
+ * @param {string} label - Texto del label del textarea
+ * @param {object} props - Props adicionales para el textarea (value, onChange, rows, etc.)
+ */
+export function FormTextArea({ label, rows = 3, ...props }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <textarea
+        {...props}
+        rows={rows}
+        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      />
+    </div>
+  );
+}
+

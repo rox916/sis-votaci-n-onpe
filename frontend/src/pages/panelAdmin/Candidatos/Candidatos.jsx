@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
-import { Search, Plus, Edit, Trash2, UserSquare2, MapPin, Building2 } from "lucide-react";
+import { Search, Plus, Edit, Trash2, UserSquare2, MapPin, Building2, Eye } from "lucide-react";
 import CandidatoCrear from "./CandidatoCrear";
 import CandidatoEditar from "./CandidatoEditar";
 import CandidatoEliminar from "./CandidatoEliminar";
+import CandidatoVerPropuestas from "./CandidatoVerPropuestas";
 import { 
   obtenerCandidatosDesdeAPI, 
   crearCandidatoEnAPI, 
@@ -241,6 +242,7 @@ export default function Candidatos() {
   const [modalCreate, setModalCreate] = useState(false);
   const [modalEdit, setModalEdit] = useState(false);
   const [modalDelete, setModalDelete] = useState(false);
+  const [modalVerPropuestas, setModalVerPropuestas] = useState(false);
 
   // Filtro y búsqueda
   const filteredCandidatos = useMemo(() => {
@@ -560,6 +562,16 @@ export default function Candidatos() {
                   <button
                     onClick={() => {
                       setSelectedCandidate(candidato);
+                      setModalVerPropuestas(true);
+                    }}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-blue-500 rounded-lg transition-all duration-200 hover:scale-110"
+                    title="Ver Propuestas"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedCandidate(candidato);
                       setModalEdit(true);
                     }}
                     className="p-2 text-gray-400 hover:text-white hover:bg-green-500 rounded-lg transition-all duration-200 hover:scale-110"
@@ -614,6 +626,12 @@ export default function Candidatos() {
         isOpen={modalDelete}
         onClose={() => setModalDelete(false)}
         onConfirm={handleDelete}
+        candidate={selectedCandidate}
+      />
+
+      <CandidatoVerPropuestas
+        isOpen={modalVerPropuestas}
+        onClose={() => setModalVerPropuestas(false)}
         candidate={selectedCandidate}
       />
     </motion.div>

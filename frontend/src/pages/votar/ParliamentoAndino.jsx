@@ -154,7 +154,7 @@ export default function ParliamentoAndino({
       <div className={`rounded-2xl shadow-lg p-8 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
         <h2
           className={`text-4xl font-bold mb-2 ${
-            darkMode ? "text-purple-300" : "text-purple-800"
+            darkMode ? "text-blue-300" : "text-blue-800"
           }`}
         >
           Parlamento Andino
@@ -192,7 +192,7 @@ export default function ParliamentoAndino({
         </p>
 
         {candidatos.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {candidatos.map((candidato) => {
               const estaSeleccionado = candidatoSeleccionado?.id === candidato.id;
 
@@ -209,11 +209,11 @@ export default function ParliamentoAndino({
                   className={`group bg-gradient-to-br rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl relative
                     ${
                       estaSeleccionado
-                        ? "border-purple-500 ring-4 ring-purple-200 shadow-purple-200"
+                        ? "border-blue-500 ring-4 ring-blue-200 shadow-blue-200"
                         : `border-2 ${
                             darkMode
-                              ? "border-gray-700 hover:border-purple-600"
-                              : "border-gray-300 hover:border-purple-400"
+                              ? "border-gray-700 hover:border-blue-600"
+                              : "border-gray-300 hover:border-blue-400"
                           }`
                     }
                     ${darkMode ? "from-gray-800 to-gray-900" : "from-white to-gray-50"}
@@ -234,11 +234,6 @@ export default function ParliamentoAndino({
                     </motion.div>
                   )}
 
-                  {/* Número de lista */}
-                  <div className="absolute top-2 left-2 z-10 bg-black/50 text-white font-bold text-2xl w-10 h-10 flex items-center justify-center rounded-full border-2 border-white">
-                    {candidato.numero || "—"}
-                  </div>
-
                   {/* Foto */}
                   <div
                     className={`relative ${
@@ -258,7 +253,7 @@ export default function ParliamentoAndino({
                   </div>
 
                   {/* Nombre */}
-                  <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 py-3">
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
                     <p
                       className="text-white text-lg font-bold text-center leading-tight truncate"
                       title={candidato.nombre}
@@ -271,7 +266,7 @@ export default function ParliamentoAndino({
                   <div className={`p-5 space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
                     {/* Partido */}
                     <div className="text-center border-b border-gray-200 dark:border-gray-700 pb-3">
-                      <p className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                      <p className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                         {candidato.partidoNombre || "Sin partido"}
                       </p>
                     </div>
@@ -310,8 +305,8 @@ export default function ParliamentoAndino({
                         className={`flex items-center justify-center gap-2 w-full font-bold py-3 px-5 rounded-lg transition-colors text-base
                           ${
                             darkMode
-                              ? "bg-gray-700 hover:bg-gray-600 text-purple-300"
-                              : "bg-purple-500 hover:bg-purple-600 text-white"
+                              ? "bg-gray-700 hover:bg-gray-600 text-blue-300"
+                              : "bg-blue-500 hover:bg-blue-600 text-white"
                           }
                         `}
                       >
@@ -322,7 +317,7 @@ export default function ParliamentoAndino({
                   </div>
 
                   {/* Línea de hover */}
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                 </motion.div>
               );
             })}
@@ -421,7 +416,7 @@ export default function ParliamentoAndino({
             ${
               darkMode
                 ? "text-gray-300 hover:text-white hover:bg-gray-700"
-                : "text-gray-700 hover:text-purple-600 hover:bg-gray-200"
+                : "text-gray-700 hover:text-blue-600 hover:bg-gray-200"
             }
           `}
         >
@@ -434,7 +429,7 @@ export default function ParliamentoAndino({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={handleConfirmar}
-            className="flex items-center justify-center gap-2 font-bold py-3 px-8 rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:shadow-lg transition-all"
+            className="flex items-center justify-center gap-2 font-bold py-3 px-8 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-lg transition-all"
           >
             <CheckCircle className="w-5 h-5" />
             {votoNuloSeleccionado ? "Confirmar Voto Nulo" : "Confirmar Voto"}
@@ -513,7 +508,7 @@ export default function ParliamentoAndino({
                 >
                   <h2
                     className={`text-4xl font-bold ${
-                      darkMode ? "text-purple-300" : "text-purple-800"
+                      darkMode ? "text-blue-300" : "text-blue-800"
                     }`}
                   >
                     {candidatoModal.nombre}
@@ -535,8 +530,8 @@ export default function ParliamentoAndino({
                           tabActiva === "perfil"
                             ? `${
                                 darkMode
-                                  ? "bg-gray-800 text-purple-300"
-                                  : "bg-white text-purple-700"
+                                  ? "bg-gray-800 text-blue-300"
+                                  : "bg-white text-blue-700"
                               } shadow-sm`
                             : `${
                                 darkMode
@@ -554,8 +549,8 @@ export default function ParliamentoAndino({
                           tabActiva === "propuestas"
                             ? `${
                                 darkMode
-                                  ? "bg-gray-800 text-purple-300"
-                                  : "bg-white text-purple-700"
+                                  ? "bg-gray-800 text-blue-300"
+                                  : "bg-white text-blue-700"
                               } shadow-sm`
                             : `${
                                 darkMode

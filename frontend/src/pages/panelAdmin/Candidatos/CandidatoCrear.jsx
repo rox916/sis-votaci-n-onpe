@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { X, PlusCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { FormInput, FormSelect } from "../../../components/shared/FormInput";
+import { FormInput, FormSelect, FormTextArea } from "../../../components/shared/FormInput";
 import { DEPARTAMENTOS_PERU } from "../../../constants/electoralConstants";
 
 export default function CandidatoCrear({ isOpen, onClose, onSave, partidos, cargos }) {
@@ -18,6 +18,8 @@ export default function CandidatoCrear({ isOpen, onClose, onSave, partidos, carg
     foto: "",
     estado: "Activo",
     distrito: "",
+    biografia: "",
+    propuestas: "",
   });
 
   // Bloquear el scroll del body cuando el modal está abierto
@@ -34,6 +36,19 @@ export default function CandidatoCrear({ isOpen, onClose, onSave, partidos, carg
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Función para convertir propuestas de string a array
+  const convertirPropuestasAArray = (propuestasString) => {
+    if (!propuestasString || propuestasString.trim() === "") {
+      return null;
+    }
+    // Separar por saltos de línea o comas
+    const propuestas = propuestasString
+      .split(/\n|,/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+    return propuestas.length > 0 ? propuestas : null;
+  };
+
   // Guardar el nuevo candidato y cerrar el modal
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -43,7 +58,15 @@ export default function CandidatoCrear({ isOpen, onClose, onSave, partidos, carg
       return;
     }
 
-    onSave({ ...formData, id: Date.now() });
+    // Convertir propuestas de string a array
+    const propuestasArray = convertirPropuestasAArray(formData.propuestas);
+    
+    onSave({ 
+      ...formData, 
+      propuestas: propuestasArray,
+      biografia: formData.biografia || null,
+      id: Date.now() 
+    });
     onClose();
   };
 
@@ -79,6 +102,24 @@ export default function CandidatoCrear({ isOpen, onClose, onSave, partidos, carg
             value={formData.nombre}
             onChange={handleChange}
             required
+          />
+
+          <FormTextArea
+            label="Biografía"
+            name="biografia"
+            value={formData.biografia}
+            onChange={handleChange}
+            placeholder="Ingrese la biografía del candidato..."
+            rows={4}
+          />
+
+          <FormTextArea
+            label="Propuestas"
+            name="propuestas"
+            value={formData.propuestas}
+            onChange={handleChange}
+            placeholder="Ingrese las propuestas separadas por comas o saltos de línea..."
+            rows={4}
           />
 
           <FormInput

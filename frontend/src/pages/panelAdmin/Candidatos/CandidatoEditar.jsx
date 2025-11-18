@@ -2,15 +2,36 @@
  * Componente modal para editar un candidato existente
  * Permite modificar los datos del candidato seleccionado
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { X, Save } from "lucide-react";
 import { motion } from "framer-motion";
-import { FormInput, FormSelect } from "../../../components/shared/FormInput";
+import { FormInput, FormSelect, FormTextArea } from "../../../components/shared/FormInput";
 import { DEPARTAMENTOS_PERU } from "../../../constants/electoralConstants";
 
 export default function CandidatoEditar({ isOpen, onClose, onSave, candidate, partidos, cargos }) {
   // Estado del formulario inicializado con los datos del candidato
   const [formData, setFormData] = useState(candidate || {});
+
+  // Función para convertir propuestas de array a string para mostrar en el textarea
+  const convertirPropuestasAString = useCallback((propuestas) => {
+    if (!propuestas || !Array.isArray(propuestas)) {
+      return "";
+    }
+    return propuestas.join("\n");
+  }, []);
+
+  // Función para convertir propuestas de string a array
+  const convertirPropuestasAArray = useCallback((propuestasString) => {
+    if (!propuestasString || propuestasString.trim() === "") {
+      return null;
+    }
+    // Separar por saltos de línea o comas
+    const propuestas = propuestasString
+      .split(/\n|,/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+    return propuestas.length > 0 ? propuestas : null;
+  }, []);
 
   // Bloquear el scroll del body cuando el modal está abierto
   useEffect(() => {
@@ -20,8 +41,16 @@ export default function CandidatoEditar({ isOpen, onClose, onSave, candidate, pa
 
   // Actualizar el formulario cuando cambie el candidato seleccionado
   useEffect(() => {
-    if (candidate) setFormData(candidate);
-  }, [candidate]);
+    if (candidate) {
+      // Convertir propuestas de array a string para el textarea
+      const propuestasString = convertirPropuestasAString(candidate.propuestas);
+      setFormData({
+        ...candidate,
+        propuestas: propuestasString,
+        biografia: candidate.biografia || "",
+      });
+    }
+  }, [candidate, convertirPropuestasAString]);
 
   if (!isOpen || !candidate) return null;
 
@@ -40,7 +69,14 @@ export default function CandidatoEditar({ isOpen, onClose, onSave, candidate, pa
       return;
     }
 
-    onSave(formData);
+    // Convertir propuestas de string a array
+    const propuestasArray = convertirPropuestasAArray(formData.propuestas);
+    
+    onSave({ 
+      ...formData, 
+      propuestas: propuestasArray,
+      biografia: formData.biografia || null,
+    });
     onClose();
   };
 
@@ -76,6 +112,24 @@ export default function CandidatoEditar({ isOpen, onClose, onSave, candidate, pa
             value={formData.nombre || ""}
             onChange={handleChange}
             required
+          />
+
+          <FormTextArea
+            label="Biografía"
+            name="biografia"
+            value={formData.biografia || ""}
+            onChange={handleChange}
+            placeholder="Ingrese la biografía del candidato..."
+            rows={4}
+          />
+
+          <FormTextArea
+            label="Propuestas"
+            name="propuestas"
+            value={formData.propuestas || ""}
+            onChange={handleChange}
+            placeholder="Ingrese las propuestas separadas por comas o saltos de línea..."
+            rows={4}
           />
 
           <FormInput
