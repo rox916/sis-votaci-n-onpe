@@ -1,14 +1,12 @@
-// API Base URL - Ajusta esto según tu configuración
-const API_BASE_URL = "http://localhost:8080/api";
+// Importar configuración centralizada de API
+import { API_BASE_URL, defaultHeaders } from "../config/apiConfig";
 
 // Servicio para consultar votante por DNI
 export const consultarVotantePorDni = async (dni) => {
   try {
     const response = await fetch(`${API_BASE_URL}/votantes/consulta/${dni}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: defaultHeaders,
     });
 
     if (!response.ok) {
@@ -31,9 +29,7 @@ export const actualizarUbicacionVotante = async (dni, departamento, provincia, d
   try {
     const response = await fetch(`${API_BASE_URL}/votantes/ubicacion/${dni}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: defaultHeaders,
       body: JSON.stringify({
         departamento,
         provincia,
@@ -61,9 +57,7 @@ export const finalizarVoto = async (dni) => {
   try {
     const response = await fetch(`${API_BASE_URL}/votantes/finalizar/${dni}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: defaultHeaders,
     });
 
     if (!response.ok) {

@@ -1,7 +1,8 @@
 // archivo: /services/votosService.js
 // Este archivo contiene los servicios para registrar votos en la API
 
-const API_BASE_URL = "http://localhost:8080/api";
+// Importar configuración centralizada de API
+import { API_BASE_URL, defaultHeaders } from "../config/apiConfig";
 
 /**
  * Registra un voto en el backend.
@@ -27,9 +28,7 @@ export const registrarVoto = async (dniVotante, idCandidato, cargoVotado = "DESC
     
     const response = await fetch(`${API_BASE_URL}/votos/registrar`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: defaultHeaders,
       body: JSON.stringify(bodyJSON),
     });
 

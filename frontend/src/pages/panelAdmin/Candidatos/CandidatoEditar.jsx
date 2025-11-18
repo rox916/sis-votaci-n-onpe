@@ -35,8 +35,8 @@ export default function CandidatoEditar({ isOpen, onClose, onSave, candidate, pa
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!formData.nombre || !formData.numeroLista) {
-      alert("Por favor completa los campos obligatorios (*)");
+    if (!formData.nombre) {
+      alert("Por favor completa el nombre del candidato (*)");
       return;
     }
 
@@ -95,11 +95,10 @@ export default function CandidatoEditar({ isOpen, onClose, onSave, candidate, pa
           />
 
           <FormInput
-            label="Número de Lista *"
+            label="Número de Lista"
             name="numeroLista"
             value={formData.numeroLista || ""}
             onChange={handleChange}
-            required
           />
 
           <FormSelect

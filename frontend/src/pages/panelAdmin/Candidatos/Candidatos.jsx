@@ -5,7 +5,13 @@ import { Search, Plus, Edit, Trash2, UserSquare2, MapPin, Building2 } from "luci
 import CandidatoCrear from "./CandidatoCrear";
 import CandidatoEditar from "./CandidatoEditar";
 import CandidatoEliminar from "./CandidatoEliminar";
-import { getCandidatos, saveCandidatos, forceUpdateCandidatos } from "../../../services/candidatosService";
+import { 
+  obtenerCandidatosDesdeAPI, 
+  crearCandidatoEnAPI, 
+  actualizarCandidatoEnAPI, 
+  eliminarCandidatoEnAPI,
+  obtenerPartidosDesdeAPI
+} from "../../../services/candidatosService";
 import { PARTIDOS_POLITICOS, CARGOS_ELECTORALES, LOGOS_PARTIDOS, CANDIDATOS_PRESIDENCIALES } from "../../../constants/electoralConstants";
 
 // Importamos las fotos y logos
@@ -128,111 +134,109 @@ const SimboloPartido = ({ partido }) => {
 
 export default function Candidatos() {
   const [candidatos, setCandidatos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [partidosMap, setPartidosMap] = useState({}); // Mapa de idPartido -> nombre
 
-  // Cargar candidatos del servicio compartido
-  useEffect(() => {
-    let candidatosData = getCandidatos();
-    
-    // Si no hay candidatos guardados, usar los candidatos presidenciales por defecto
-    if (!candidatosData || candidatosData.length === 0) {
-      const fotosMap = {
-        1: fotoRLA,
-        2: fotoKeiko,
-        3: fotoAcuna,
-        4: fotoAlvarez,
-        6: fotoLopezChau,
-        7: fotoButters,
-        8: fotoPerezTello,
-      };
-
-      const logosMap = {
-        "Renovación Popular": logoRenovacion,
-        "Fuerza Popular": logoFuerza,
-        "Alianza para el Progreso": logoAPP,
-        "País para Todos": logoPaisTodos,
-        "Ahora Nación": logoAhoraNacion,
-        "Avanza País": logoAvanza,
-        "Primero la Gente": logoPrimeroGente,
-      };
-
-      candidatosData = CANDIDATOS_PRESIDENCIALES.map(candidato => ({
-        id: candidato.id,
-        nombre: candidato.nombre,
-        foto: fotosMap[candidato.id] || candidato.foto,
-        partidoPolitico: candidato.partido,
-        cargo: "Presidente",
-        numeroLista: candidato.numero,
-        estado: "Activo",
-        logoPartido: logosMap[candidato.partido],
-        vicepresidentes: candidato.vicepresidentes,
-        propuestas: candidato.propuestas,
-        biografia: candidato.biografia,
-      }));
-      saveCandidatos(candidatosData);
-    }
-    
-    // Asegurar que todos los candidatos tengan sus fotos y logos correctos
-    const candidatosConFotos = candidatosData.map(candidato => ({
-      ...candidato,
-      foto: getFotoCandidato(candidato) || candidato.foto || "",
-      logoPartido: getLogoPartido(candidato.partidoPolitico) || candidato.logoPartido || null,
-    }));
-    
-    setCandidatos(candidatosConFotos);
-  }, []);
-
-  // Función para actualizar datos si es necesario
-  const handleRefreshData = () => {
-    const updated = forceUpdateCandidatos();
-    // Asegurar que todos los candidatos tengan sus fotos y logos correctos
-    const candidatosConFotos = updated.map(candidato => ({
-      ...candidato,
-      foto: getFotoCandidato(candidato) || candidato.foto || "",
-      logoPartido: getLogoPartido(candidato.partidoPolitico) || candidato.logoPartido || null,
-    }));
-    setCandidatos(candidatosConFotos);
-    alert("Datos actualizados correctamente. Los congresistas ahora muestran su distrito.");
+  // Función para mapear candidato del backend al formato del frontend
+  const mapearCandidatoDesdeBackend = (candidatoBackend, partidosMap) => {
+    const nombrePartido = partidosMap[candidatoBackend.idPartido] || "Sin partido";
+    return {
+      id: candidatoBackend.idCandidato,
+      idCandidato: candidatoBackend.idCandidato,
+      nombre: candidatoBackend.nombreCompleto,
+      nombreCompleto: candidatoBackend.nombreCompleto,
+      partidoPolitico: nombrePartido,
+      idPartido: candidatoBackend.idPartido,
+      cargo: candidatoBackend.cargo,
+      distrito: candidatoBackend.distrito || "",
+      foto: candidatoBackend.foto || "",
+      estado: candidatoBackend.estado || "Activo",
+      biografia: candidatoBackend.biografia || "",
+      propuestas: candidatoBackend.propuestas || [],
+      numeroLista: 0, // El backend no tiene este campo, se puede agregar después si es necesario
+    };
   };
 
-  // Función para cargar candidatos presidenciales
+  // Cargar candidatos desde la API del backend
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        setLoading(true);
+        
+        // Cargar partidos primero para mapear IDs a nombres
+        const partidos = await obtenerPartidosDesdeAPI();
+        const mapaPartidos = {};
+        partidos.forEach(p => {
+          mapaPartidos[p.idPartido] = p.nombre;
+        });
+        setPartidosMap(mapaPartidos);
+
+        // Cargar candidatos desde la API
+        const candidatosBackend = await obtenerCandidatosDesdeAPI();
+        
+        // Mapear candidatos del backend al formato del frontend
+        const candidatosMapeados = candidatosBackend.map(c => 
+          mapearCandidatoDesdeBackend(c, mapaPartidos)
+        );
+        
+        // Asegurar que todos los candidatos tengan sus fotos y logos correctos
+        const candidatosConFotos = candidatosMapeados.map(candidato => ({
+          ...candidato,
+          foto: getFotoCandidato(candidato) || candidato.foto || "",
+          logoPartido: getLogoPartido(candidato.partidoPolitico) || null,
+        }));
+        
+        setCandidatos(candidatosConFotos);
+      } catch (error) {
+        console.error("Error al cargar candidatos desde API:", error);
+        alert("Error al cargar candidatos. Verifica que el backend esté corriendo.");
+        setCandidatos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
+
+  // Función para recargar datos desde la API
+  const handleRefreshData = async () => {
+    try {
+      setLoading(true);
+      
+      // Recargar partidos
+      const partidos = await obtenerPartidosDesdeAPI();
+      const mapaPartidos = {};
+      partidos.forEach(p => {
+        mapaPartidos[p.idPartido] = p.nombre;
+      });
+      setPartidosMap(mapaPartidos);
+
+      // Recargar candidatos
+      const candidatosBackend = await obtenerCandidatosDesdeAPI();
+      const candidatosMapeados = candidatosBackend.map(c => 
+        mapearCandidatoDesdeBackend(c, mapaPartidos)
+      );
+      
+      const candidatosConFotos = candidatosMapeados.map(candidato => ({
+        ...candidato,
+        foto: getFotoCandidato(candidato) || candidato.foto || "",
+        logoPartido: getLogoPartido(candidato.partidoPolitico) || null,
+      }));
+      
+      setCandidatos(candidatosConFotos);
+      alert("Datos recargados correctamente desde la base de datos.");
+    } catch (error) {
+      console.error("Error al recargar datos:", error);
+      alert(`Error al recargar datos: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para cargar candidatos presidenciales (deshabilitada - ahora se usa la BD)
   const handleLoadPresidenciales = () => {
-    const fotosMap = {
-      1: fotoRLA,
-      2: fotoKeiko,
-      3: fotoAcuna,
-      4: fotoAlvarez,
-      6: fotoLopezChau,
-      7: fotoButters,
-      8: fotoPerezTello,
-    };
-
-    const logosMap = {
-      "Renovación Popular": logoRenovacion,
-      "Fuerza Popular": logoFuerza,
-      "Alianza para el Progreso": logoAPP,
-      "País para Todos": logoPaisTodos,
-      "Ahora Nación": logoAhoraNacion,
-      "Avanza País": logoAvanza,
-      "Primero la Gente": logoPrimeroGente,
-    };
-
-    const candidatosPresidenciales = CANDIDATOS_PRESIDENCIALES.map(candidato => ({
-      id: candidato.id,
-      nombre: candidato.nombre,
-      foto: fotosMap[candidato.id] || candidato.foto,
-      partidoPolitico: candidato.partido,
-      cargo: "Presidente",
-      numeroLista: candidato.numero,
-      estado: "Activo",
-      logoPartido: logosMap[candidato.partido],
-      vicepresidentes: candidato.vicepresidentes,
-      propuestas: candidato.propuestas,
-      biografia: candidato.biografia,
-    }));
-    
-    setCandidatos(candidatosPresidenciales);
-    saveCandidatos(candidatosPresidenciales);
-    alert("Candidatos presidenciales cargados correctamente con sus fotos.");
+    alert("Esta función ya no está disponible. Los candidatos se cargan desde la base de datos.");
   };
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -261,27 +265,109 @@ export default function Candidatos() {
     });
   }, [candidatos, searchTerm, filterCargo]);
 
-  // Acciones - Sincronizar con localStorage
-  const handleCreate = (data) => {
-    const nuevosCandidatos = [...candidatos, { ...data, id: Date.now() }];
-    setCandidatos(nuevosCandidatos);
-    saveCandidatos(nuevosCandidatos);
-    setModalCreate(false);
+  // Acciones - Sincronizar con API del backend
+  const handleCreate = async (data) => {
+    try {
+      setLoading(true);
+      const candidatoCreado = await crearCandidatoEnAPI(data);
+      
+      // Mapear el candidato creado al formato del frontend
+      const candidatoMapeado = mapearCandidatoDesdeBackend(candidatoCreado, partidosMap);
+      const candidatoConFotos = {
+        ...candidatoMapeado,
+        foto: getFotoCandidato(candidatoMapeado) || candidatoMapeado.foto || "",
+        logoPartido: getLogoPartido(candidatoMapeado.partidoPolitico) || null,
+      };
+      
+      setCandidatos([...candidatos, candidatoConFotos]);
+      setModalCreate(false);
+      alert("Candidato creado exitosamente en la base de datos.");
+    } catch (error) {
+      console.error("Error al crear candidato:", error);
+      alert(`Error al crear candidato: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEdit = (data) => {
-    const candidatosActualizados = candidatos.map((c) => (c.id === data.id ? data : c));
-    setCandidatos(candidatosActualizados);
-    saveCandidatos(candidatosActualizados);
-    setModalEdit(false);
+  const handleEdit = async (data) => {
+    try {
+      setLoading(true);
+      // Usar idCandidato si existe, sino usar id
+      const idCandidato = data.idCandidato || data.id;
+      
+      if (!idCandidato) {
+        throw new Error("ID del candidato no encontrado");
+      }
+
+      const candidatoActualizado = await actualizarCandidatoEnAPI(idCandidato, data);
+      
+      // Mapear el candidato actualizado al formato del frontend
+      const candidatoMapeado = mapearCandidatoDesdeBackend(candidatoActualizado, partidosMap);
+      const candidatoConFotos = {
+        ...candidatoMapeado,
+        foto: getFotoCandidato(candidatoMapeado) || candidatoMapeado.foto || "",
+        logoPartido: getLogoPartido(candidatoMapeado.partidoPolitico) || null,
+      };
+      
+      const candidatosActualizados = candidatos.map((c) => 
+        (c.id === idCandidato || c.idCandidato === idCandidato) ? candidatoConFotos : c
+      );
+      
+      setCandidatos(candidatosActualizados);
+      setModalEdit(false);
+      alert("Candidato actualizado exitosamente en la base de datos.");
+    } catch (error) {
+      console.error("Error al actualizar candidato:", error);
+      alert(`Error al actualizar candidato: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = () => {
-    const candidatosActualizados = candidatos.filter((c) => c.id !== selectedCandidate.id);
-    setCandidatos(candidatosActualizados);
-    saveCandidatos(candidatosActualizados);
-    setModalDelete(false);
+  const handleDelete = async () => {
+    if (!selectedCandidate) return;
+    
+    if (!confirm(`¿Estás seguro de eliminar a ${selectedCandidate.nombre}?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Usar idCandidato si existe, sino usar id
+      const idCandidato = selectedCandidate.idCandidato || selectedCandidate.id;
+      
+      if (!idCandidato) {
+        throw new Error("ID del candidato no encontrado");
+      }
+
+      await eliminarCandidatoEnAPI(idCandidato);
+      
+      const candidatosActualizados = candidatos.filter((c) => 
+        c.id !== idCandidato && c.idCandidato !== idCandidato
+      );
+      
+      setCandidatos(candidatosActualizados);
+      setModalDelete(false);
+      alert("Candidato eliminado exitosamente de la base de datos.");
+    } catch (error) {
+      console.error("Error al eliminar candidato:", error);
+      alert(`Error al eliminar candidato: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading && candidatos.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando candidatos desde la base de datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">

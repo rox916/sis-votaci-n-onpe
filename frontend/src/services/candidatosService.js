@@ -14,7 +14,7 @@
 
 import { initialCandidatos } from './data/candidatosData';
 import { propuestasPorPartido } from './data/propuestasData';
-import { fetchAPI, API_ENDPOINTS } from "../config/apiConfig";
+import { fetchAPI, API_ENDPOINTS, API_BASE_URL, defaultHeaders } from "../config/apiConfig";
 
 // Clave para almacenar candidatos en localStorage
 const CANDIDATOS_STORAGE_KEY = 'candidatos_electorales';
@@ -194,6 +194,234 @@ export const getCandidatosParaVotacion = () => {
 
 // Inicializar datos al cargar el módulo
 initializeData();
+
+// ============================================
+// FUNCIONES PARA COMUNICARSE CON LA API DEL BACKEND
+// ============================================
+
+/**
+ * Obtiene todos los candidatos desde la API del backend
+ * @returns {Promise<Array>} Lista de candidatos
+ */
+export const obtenerCandidatosDesdeAPI = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.LISTAR}`, {
+      method: "GET",
+      headers: defaultHeaders,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error al obtener candidatos desde API:", error);
+    throw error;
+  }
+};
+
+/**
+ * Obtiene todos los partidos desde la API para mapear nombres a IDs
+ * @returns {Promise<Array>} Lista de partidos
+ */
+export const obtenerPartidosDesdeAPI = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PARTIDOS.LISTAR}`, {
+      method: "GET",
+      headers: defaultHeaders,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error al obtener partidos desde API:", error);
+    throw error;
+  }
+};
+
+/**
+ * Busca el ID de un partido por su nombre
+ * @param {string} nombrePartido - Nombre del partido
+ * @returns {Promise<number|null>} ID del partido o null si no se encuentra
+ */
+export const obtenerIdPartidoPorNombre = async (nombrePartido) => {
+  try {
+    console.log("=== Buscando ID del partido ===", nombrePartido);
+    const partidos = await obtenerPartidosDesdeAPI();
+    console.log("=== Partidos disponibles ===", partidos);
+    const partido = partidos.find(p => p.nombre === nombrePartido);
+    console.log("=== Partido encontrado ===", partido);
+    return partido ? partido.idPartido : null;
+  } catch (error) {
+    console.error("Error al buscar ID del partido:", error);
+    return null;
+  }
+};
+
+/**
+ * Crea un nuevo candidato en el backend
+ * @param {Object} candidatoData - Datos del candidato
+ * @returns {Promise<Object>} Candidato creado
+ */
+export const crearCandidatoEnAPI = async (candidatoData) => {
+  try {
+    console.log("=== crearCandidatoEnAPI - Datos recibidos ===", candidatoData);
+    
+    // Obtener idPartido desde el nombre del partido
+    const idPartido = await obtenerIdPartidoPorNombre(candidatoData.partidoPolitico);
+    
+    if (!idPartido) {
+      throw new Error(`No se encontró el partido: ${candidatoData.partidoPolitico}. Asegúrate de que el partido exista en la base de datos.`);
+    }
+
+    // Mapear campos del frontend al backend
+    const candidatoParaBackend = {
+      idPartido: idPartido,
+      nombreCompleto: candidatoData.nombre || candidatoData.nombreCompleto,
+      biografia: candidatoData.biografia || null,
+      propuestas: candidatoData.propuestas || null,
+      cargo: candidatoData.cargo,
+      distrito: candidatoData.distrito || null,
+      foto: candidatoData.foto || null,
+      estado: candidatoData.estado || "Activo",
+    };
+
+    console.log("=== candidatoParaBackend ===", candidatoParaBackend);
+    console.log("=== URL ===", `${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.LISTAR}`);
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.LISTAR}`, {
+      method: "POST",
+      headers: defaultHeaders,
+      body: JSON.stringify(candidatoParaBackend),
+    });
+
+    console.log("=== Response status ===", response.status, response.statusText);
+
+    if (!response.ok) {
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        console.error("=== Error data from backend ===", errorData);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+        
+        // Si hay detalles adicionales, agregarlos
+        if (errorData.details) {
+          errorMessage += ` - ${errorData.details}`;
+        }
+      } catch (parseError) {
+        // Si no se puede parsear el JSON, intentar leer como texto
+        const textError = await response.text().catch(() => "");
+        if (textError) {
+          errorMessage += ` - ${textError}`;
+        }
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log("=== Candidato creado exitosamente ===", data);
+    return data;
+  } catch (error) {
+    console.error("=== Error completo al crear candidato ===", error);
+    // Si el error ya tiene un mensaje, lanzarlo tal cual
+    if (error.message) {
+      throw error;
+    }
+    // Si no, crear un mensaje más descriptivo
+    throw new Error(`Error al crear candidato: ${error.toString()}`);
+  }
+};
+
+/**
+ * Actualiza un candidato existente en el backend
+ * @param {number} idCandidato - ID del candidato a actualizar
+ * @param {Object} candidatoData - Datos actualizados del candidato
+ * @returns {Promise<Object>} Candidato actualizado
+ */
+export const actualizarCandidatoEnAPI = async (idCandidato, candidatoData) => {
+  try {
+    console.log("=== actualizarCandidatoEnAPI ===", { idCandidato, candidatoData });
+    
+    // Obtener idPartido desde el nombre del partido
+    const idPartido = await obtenerIdPartidoPorNombre(candidatoData.partidoPolitico);
+    
+    if (!idPartido) {
+      throw new Error(`No se encontró el partido: ${candidatoData.partidoPolitico}. Asegúrate de que el partido exista en la base de datos.`);
+    }
+
+    // Mapear campos del frontend al backend
+    const candidatoParaBackend = {
+      idPartido: idPartido,
+      nombreCompleto: candidatoData.nombre || candidatoData.nombreCompleto,
+      biografia: candidatoData.biografia || null,
+      propuestas: candidatoData.propuestas || null,
+      cargo: candidatoData.cargo,
+      distrito: candidatoData.distrito || null,
+      foto: candidatoData.foto || null,
+      estado: candidatoData.estado || "Activo",
+    };
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.POR_ID(idCandidato)}`, {
+      method: "PUT",
+      headers: defaultHeaders,
+      body: JSON.stringify(candidatoParaBackend),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+        if (errorData.details) {
+          errorMessage += ` - ${errorData.details}`;
+        }
+      } catch (parseError) {
+        const textError = await response.text().catch(() => "");
+        if (textError) {
+          errorMessage += ` - ${textError}`;
+        }
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error al actualizar candidato en API:", error);
+    if (error.message) {
+      throw error;
+    }
+    throw new Error(`Error al actualizar candidato: ${error.toString()}`);
+  }
+};
+
+/**
+ * Elimina un candidato del backend
+ * @param {number} idCandidato - ID del candidato a eliminar
+ * @returns {Promise<void>}
+ */
+export const eliminarCandidatoEnAPI = async (idCandidato) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.POR_ID(idCandidato)}`, {
+      method: "DELETE",
+      headers: defaultHeaders,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error("Error al eliminar candidato en API:", error);
+    throw error;
+  }
+};
 
 /**
  * Obtiene candidatos desde la API enriquecidos con datos del partido.

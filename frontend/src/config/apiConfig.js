@@ -21,7 +21,7 @@ const resolveApiBaseUrl = () => {
   }
 
   // 3) Valor por defecto para desarrollo
-  return "http://localhost:8080/api";
+  return "http://localhost:8082/api";
 };
 
 export const API_BASE_URL = resolveApiBaseUrl();
