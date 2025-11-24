@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { CheckCircle, AlertCircle, X } from "lucide-react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
+import { subirDataset } from "../../../services/datasetsService";
 
-export default function PadronSubir({ isOpen, onClose, fileInputRef }) {
+export default function PadronSubir({ isOpen, onClose, fileInputRef, onUploadSuccess }) {
   const [uploadStatus, setUploadStatus] = useState("idle"); // idle, uploading, success, error
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Bloquear el scroll del body cuando el modal está abierto
   useEffect(() => {
@@ -16,35 +18,56 @@ export default function PadronSubir({ isOpen, onClose, fileInputRef }) {
 
   if (!isOpen) return null;
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Simular validación de archivo
+    // Validar archivo
     if (!file.name.endsWith(".csv")) {
       setUploadStatus("error");
+      setErrorMessage("Por favor, asegúrate de subir un archivo CSV válido.");
       return;
     }
 
-    setUploadStatus("uploading");
-    setUploadProgress(0);
+    try {
+      setUploadStatus("uploading");
+      setUploadProgress(0);
+      setErrorMessage("");
 
-    // Simular carga progresiva
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => setUploadStatus("success"), 500);
-          return 100;
+      // Simular progreso mientras se sube
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) {
+            return prev; // Mantener en 90% hasta que termine
+          }
+          return prev + 20;
+        });
+      }, 300);
+
+      // Subir archivo al backend
+      const dataset = await subirDataset(file);
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setTimeout(() => {
+        setUploadStatus("success");
+        // Notificar al componente padre que la carga fue exitosa
+        if (onUploadSuccess) {
+          onUploadSuccess(dataset);
         }
-        return prev + 20;
-      });
-    }, 300);
+      }, 500);
+    } catch (error) {
+      console.error("Error al subir archivo:", error);
+      setUploadStatus("error");
+      setErrorMessage(error.message || "Error al subir el archivo. Por favor, intenta nuevamente.");
+      setUploadProgress(0);
+    }
   };
 
   const handleClose = () => {
     setUploadStatus("idle");
     setUploadProgress(0);
+    setErrorMessage("");
     if (fileInputRef?.current) fileInputRef.current.value = null;
     onClose();
   };
@@ -134,10 +157,10 @@ export default function PadronSubir({ isOpen, onClose, fileInputRef }) {
           <div className="text-center">
             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <p className="text-lg font-semibold text-gray-900">
-              Error de Formato
+              Error al Subir Archivo
             </p>
-            <p className="text-sm text-gray-600">
-              Por favor, asegúrate de subir un archivo CSV válido.
+            <p className="text-sm text-gray-600 mt-2">
+              {errorMessage || "Por favor, asegúrate de subir un archivo CSV válido."}
             </p>
             <button
               onClick={handleClose}

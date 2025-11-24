@@ -21,7 +21,7 @@ const resolveApiBaseUrl = () => {
   }
 
   // 3) Valor por defecto para desarrollo
-  return "http://localhost:8082/api";
+  return "http://localhost:8080/api";
 };
 
 export const API_BASE_URL = resolveApiBaseUrl();
@@ -71,11 +71,15 @@ export const API_ENDPOINTS = {
 
   // Candidatos
   CANDIDATOS: {
-    PRESIDENCIAL: "/candidatos/presidencial",
-    CONGRESISTAS: "/candidatos/congresistas",
-    ANDINOS: "/candidatos/andinos",
-    LISTAR: "/candidatos",
+    PRESIDENCIAL: "/presidentes", // Backend: /api/presidentes (GET) - Tabla específica de presidentes
+    CONGRESISTAS: "/congresistas", // Backend: /api/congresistas
+    ANDINOS: "/parlamento-andino", // Backend: /api/parlamento-andino (controlador separado ParlamentoAndinoController)
+    LISTAR: "/candidatos", // Backend: /api/candidatos (tabla general)
     POR_ID: (id) => `/candidatos/${id}`,
+    // Endpoints específicos para crear
+    CREAR_PRESIDENTE: "/presidentes", // Backend: /api/presidentes (POST)
+    CREAR_CONGRESISTA: "/congresistas", // Backend: /api/congresistas (POST)
+    CREAR_PARLAMENTARIO: "/parlamento-andino", // Backend: /api/parlamento-andino (POST)
   },
 
   // Votos
@@ -87,5 +91,30 @@ export const API_ENDPOINTS = {
   PARTIDOS: {
     LISTAR: "/partidos",
     POR_ID: (id) => `/partidos/${id}`,
+  },
+
+  // Datasets (Gestión de archivos CSV)
+  DATASETS: {
+    ORIGINALES: {
+      LISTAR: "/datasets/originales",
+      SUBIR: "/datasets/originales",
+      ELIMINAR: (id) => `/datasets/originales/${id}`,
+    },
+    LIMPIOS: {
+      LISTAR: "/datasets/limpios",
+    },
+    LIMPIAR: (idOriginal) => `/datasets/limpiar/${idOriginal}`, // Backend usa idOriginal como nombre del parámetro
+  },
+
+  // Machine Learning
+  ML: {
+    ENTRENAR: (idLimpio) => `/ml/entrenar?idLimpio=${idLimpio}`,
+    PREDICCION: (idLimpio) => `/ml/prediccion?idLimpio=${idLimpio}`, // Backend requiere idLimpio como query param
+  },
+
+  // Análisis y Gráficos
+  ANALISIS: {
+    DISTRIBUCION: (idLimpio) => `/analisis/distribucion?idLimpio=${idLimpio}`, // Backend requiere idLimpio como query param
+    TENDENCIA: (idLimpio) => `/analisis/tendencia?idLimpio=${idLimpio}`, // Backend requiere idLimpio como query param
   },
 };

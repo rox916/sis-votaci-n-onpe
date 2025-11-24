@@ -12,34 +12,48 @@ const initialRoles = [
     id: 1,
     nombre: "Super Admin",
     descripcion: "Acceso total al sistema y configuración global.",
-    permisos: ["Usuarios", "Centros", "Resultados", "Configuración", "Auditoría", "Análisis de Datos"],
+    permisos: ["Dashboard", "Usuarios", "Candidatos", "Centros", "Padrón Electoral", "Resultados", "Configuración", "Auditoría", "Análisis de Datos", "Reportes"],
     estado: "Activo",
   },
   {
     id: 2,
     nombre: "Admin Regional",
     descripcion: "Gestiona centros y resultados dentro de su región.",
-    permisos: ["Centros", "Resultados", "Reportes"],
+    permisos: ["Dashboard", "Centros", "Resultados", "Reportes"],
     estado: "Activo",
   },
   {
     id: 3,
     nombre: "Presidente de Mesa",
     descripcion: "Registra y valida los resultados de mesa electoral.",
-    permisos: ["Resultados"],
+    permisos: ["Dashboard", "Resultados"],
     estado: "Activo",
   },
   {
     id: 4,
     nombre: "Soporte Técnico",
     descripcion: "Da soporte al sistema y usuarios regionales.",
-    permisos: ["Usuarios", "Reportes"],
+    permisos: ["Dashboard", "Usuarios", "Reportes"],
     estado: "Inactivo",
   },
 ];
 
 export default function RolesyPermisos() {
-  const [roles, setRoles] = useState(initialRoles);
+  // Cargar roles desde localStorage o usar datos iniciales
+  const [roles, setRoles] = useState(() => {
+    const stored = localStorage.getItem("roles");
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    // Si no hay roles guardados, guardar los iniciales
+    localStorage.setItem("roles", JSON.stringify(initialRoles));
+    return initialRoles;
+  });
+
+  // Guardar en localStorage cuando cambien los roles
+  React.useEffect(() => {
+    localStorage.setItem("roles", JSON.stringify(roles));
+  }, [roles]);
   const [selectedRole, setSelectedRole] = useState(null);
   const [modalCreate, setModalCreate] = useState(false);
   const [modalEdit, setModalEdit] = useState(false);

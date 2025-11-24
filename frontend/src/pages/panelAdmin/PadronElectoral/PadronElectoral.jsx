@@ -1,28 +1,57 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
-import { ClipboardCheck, Search, Upload, Eye, UserCheck, UserX } from "lucide-react";
+import { ClipboardCheck, Search, Upload, Eye, UserCheck, UserX, Trash2 } from "lucide-react";
 import PadronSubir from "./PadronSubir";
 import PadronVer from "./PadronVer";
-
-// Datos de ejemplo iniciales
-const initialPadron = [
-  { id: 1, dni: "87654321", nombre: "Ana Gabriela Castillo Garcia", departamento: "Lima", provincia: "Lima", distrito: "San Borja", centroVotacion: "IE 1234 República de Venezuela", mesa: "045", estado: "Votó" },
-  { id: 2, dni: "12345678", nombre: "Carlos Ruiz Mendoza", departamento: "Cusco", provincia: "Cusco", distrito: "Wanchaq", centroVotacion: "Colegio Nacional Nuestra Señora de Guadalupe", mesa: "112", estado: "No Votó" },
-  { id: 3, dni: "87654322", nombre: "Lucía Ramírez Torres", departamento: "Arequipa", provincia: "Arequipa", distrito: "Cercado", centroVotacion: "IE 3050 Ramón Castilla", mesa: "023", estado: "Votó" },
-  { id: 4, dni: "12345679", nombre: "Miguel Torres Vargas", departamento: "Lima", provincia: "Lima", distrito: "San Miguel", centroVotacion: 'Complejo Deportivo "La Videna"', mesa: "201", estado: "Votó" },
-  { id: 5, dni: "45678901", nombre: "Sofia Morales Diaz", departamento: "Piura", provincia: "Piura", distrito: "Catacaos", centroVotacion: "IE 0051 Gran Mariscal Ramón Castilla", mesa: "156", estado: "No Votó" },
-  { id: 6, dni: "98765432", nombre: "Pedro Alvarado Sosa", departamento: "Lima", provincia: "Huaral", distrito: "Huaral", centroVotacion: "IE 2070 José Carlos Mariátegui", mesa: "089", estado: "Votó" },
-  { id: 7, dni: "11223344", nombre: "Patricia Rojas Benavides", departamento: "Junín", provincia: "Huancayo", distrito: "Huancayo", centroVotacion: "IE 3082 Santa Rosa", mesa: "234", estado: "No Votó" },
-];
+import { obtenerDatasetsOriginales, eliminarDataset } from "../../../services/datasetsService";
 
 export default function PadronElectoral() {
-  const [padron] = useState(initialPadron);
+  const [padron] = useState([]);
+  const [datasets, setDatasets] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Cargar lista de datasets al montar el componente
+  useEffect(() => {
+    cargarDatasets();
+  }, []);
+
+  const cargarDatasets = async () => {
+    try {
+      setLoading(true);
+      const datos = await obtenerDatasetsOriginales();
+      setDatasets(datos || []);
+    } catch (error) {
+      console.error("Error al cargar datasets:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadSuccess = () => {
+    // Recargar la lista de datasets después de una carga exitosa
+    cargarDatasets();
+  };
+
+  const handleDeleteDataset = async (id) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este archivo?")) {
+      return;
+    }
+
+    try {
+      await eliminarDataset(id);
+      // Recargar la lista
+      cargarDatasets();
+    } catch (error) {
+      console.error("Error al eliminar dataset:", error);
+      alert("Error al eliminar el archivo. Por favor, intenta nuevamente.");
+    }
+  };
 
   // Filtro
   const filteredPadron = useMemo(() => {
@@ -160,11 +189,63 @@ export default function PadronElectoral() {
         </div>
       </div>
 
+      {/* Lista de archivos subidos */}
+      {datasets.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+          <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900">Archivos CSV Subidos</h2>
+            <p className="text-sm text-gray-600 mt-1">Gestiona los archivos del padrón electoral</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nombre del Archivo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha de Subida
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {datasets.map((dataset) => (
+                  <tr key={dataset.id || dataset.idDataset} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {dataset.nombre || dataset.nombreArchivo || "Sin nombre"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {dataset.fechaCreacion 
+                        ? new Date(dataset.fechaCreacion).toLocaleDateString('es-PE')
+                        : "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleDeleteDataset(dataset.id || dataset.idDataset)}
+                        className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
+                        title="Eliminar archivo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Modales */}
       <PadronSubir
         isOpen={isUploadModalOpen}
         onClose={handleCloseModals}
         fileInputRef={fileInputRef}
+        onUploadSuccess={handleUploadSuccess}
       />
 
       <PadronVer

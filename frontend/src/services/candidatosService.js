@@ -19,61 +19,28 @@ import { fetchAPI, API_ENDPOINTS, API_BASE_URL, defaultHeaders } from "../config
 // Clave para almacenar candidatos en localStorage
 const CANDIDATOS_STORAGE_KEY = 'candidatos_electorales';
 
-// Crear una copia saneada de los datos iniciales: eliminar referencias a URLs externas
-const sanitizedInitialCandidatos = initialCandidatos.map(c => ({
-  ...c,
-  foto: (typeof c.foto === 'string' && (c.foto.includes('http://') || c.foto.includes('https://') || c.foto.includes('pravatar') || c.foto.includes('dicebear'))) ? '' : c.foto,
-}));
+// NOTA: Los datos simulados han sido eliminados. Todos los candidatos se cargan desde la API.
+// Este servicio ahora solo usa localStorage como caché temporal de datos de la API.
 
 /**
- * Verifica si los datos necesitan actualizarse
- * Compara la cantidad de candidatos y actualiza si es necesario
- */
-const needsUpdate = (storedData) => {
-  if (!storedData || storedData.length === 0) return true;
-  // Si la cantidad de candidatos es muy diferente, actualizar
-  if (Math.abs(storedData.length - initialCandidatos.length) > 10) return true;
-  // Verificar si los congresistas tienen el campo distrito
-  const congresistasStored = storedData.filter(c => c.cargo === "Congresista");
-  const congresistasWithDistrito = congresistasStored.filter(c => c.distrito);
-  // Si hay congresistas sin distrito, actualizar
-  if (congresistasStored.length > 0 && congresistasWithDistrito.length < congresistasStored.length) {
-    return true;
-  }
-  return false;
-};
-
-/**
- * Inicializa los datos de candidatos en localStorage si no existen o necesitan actualización
- * Actualiza automáticamente si detecta que faltan campos importantes
+ * Inicializa los datos de candidatos en localStorage (vacío, ya no hay datos simulados)
  */
 const initializeData = () => {
   const stored = localStorage.getItem(CANDIDATOS_STORAGE_KEY);
   if (!stored) {
-    localStorage.setItem(CANDIDATOS_STORAGE_KEY, JSON.stringify(sanitizedInitialCandidatos));
-    return;
-  }
-  
-  try {
-    const storedData = JSON.parse(stored);
-    if (needsUpdate(storedData)) {
-      // Actualizar con los datos iniciales que tienen todos los campos
-      localStorage.setItem(CANDIDATOS_STORAGE_KEY, JSON.stringify(sanitizedInitialCandidatos));
-    }
-  } catch (e) {
-    // Si hay error al parsear, reemplazar con datos iniciales
-    localStorage.setItem(CANDIDATOS_STORAGE_KEY, JSON.stringify(sanitizedInitialCandidatos));
+    // Inicializar con array vacío en lugar de datos simulados
+    localStorage.setItem(CANDIDATOS_STORAGE_KEY, JSON.stringify([]));
   }
 };
 
 /**
  * Obtiene todos los candidatos almacenados
- * @returns {Array} Lista de todos los candidatos
+ * @returns {Array} Lista de todos los candidatos (vacío si no hay datos en localStorage)
  */
 export const getCandidatos = () => {
   initializeData();
   const data = localStorage.getItem(CANDIDATOS_STORAGE_KEY);
-  return data ? JSON.parse(data) : sanitizedInitialCandidatos;
+  return data ? JSON.parse(data) : [];
 };
 
 /**
@@ -85,12 +52,12 @@ export const saveCandidatos = (candidatos) => {
 };
 
 /**
- * Fuerza la actualización de los datos desde los datos iniciales
- * Útil cuando se han actualizado los datos iniciales y se necesita refrescar
+ * Fuerza la actualización de los datos (ahora vacía, ya no hay datos simulados)
+ * Útil para limpiar el caché de localStorage
  */
 export const forceUpdateCandidatos = () => {
-  localStorage.setItem(CANDIDATOS_STORAGE_KEY, JSON.stringify(sanitizedInitialCandidatos));
-  return sanitizedInitialCandidatos;
+  localStorage.setItem(CANDIDATOS_STORAGE_KEY, JSON.stringify([]));
+  return [];
 };
 
 /**
@@ -266,6 +233,7 @@ export const obtenerIdPartidoPorNombre = async (nombrePartido) => {
 
 /**
  * Crea un nuevo candidato en el backend
+ * Detecta automáticamente el tipo de candidato y usa el endpoint correcto
  * @param {Object} candidatoData - Datos del candidato
  * @returns {Promise<Object>} Candidato creado
  */
@@ -273,14 +241,201 @@ export const crearCandidatoEnAPI = async (candidatoData) => {
   try {
     console.log("=== crearCandidatoEnAPI - Datos recibidos ===", candidatoData);
     
-    // Obtener idPartido desde el nombre del partido
-    const idPartido = await obtenerIdPartidoPorNombre(candidatoData.partidoPolitico);
+    const cargo = candidatoData.cargo;
     
+    // Detectar tipo de candidato y usar función específica
+    if (cargo === "Congresista") {
+      return await crearCongresistaEnAPI(candidatoData);
+    } else if (cargo === "Parlamentario Andino") {
+      return await crearParlamentarioAndinoEnAPI(candidatoData);
+    } else if (cargo === "Presidente" || cargo === "Primer Vicepresidente" || cargo === "Segundo Vicepresidente") {
+      return await crearPresidenteEnAPI(candidatoData);
+    } else {
+      // Para otros cargos, usar el endpoint general de candidatos
+      return await crearCandidatoGeneralEnAPI(candidatoData);
+    }
+  } catch (error) {
+    console.error("=== Error completo al crear candidato ===", error);
+    if (error.message) {
+      throw error;
+    }
+    throw new Error(`Error al crear candidato: ${error.toString()}`);
+  }
+};
+
+/**
+ * Crea un congresista en el backend
+ * @param {Object} candidatoData - Datos del candidato
+ * @returns {Promise<Object>} Congresista creado
+ */
+export const crearCongresistaEnAPI = async (candidatoData) => {
+  try {
+    const idPartido = await obtenerIdPartidoPorNombre(candidatoData.partidoPolitico);
     if (!idPartido) {
-      throw new Error(`No se encontró el partido: ${candidatoData.partidoPolitico}. Asegúrate de que el partido exista en la base de datos.`);
+      throw new Error(`No se encontró el partido: ${candidatoData.partidoPolitico}`);
     }
 
-    // Mapear campos del frontend al backend
+    // Separar nombre completo en nombres y apellidos
+    const nombreCompleto = candidatoData.nombre || candidatoData.nombreCompleto || "";
+    const partesNombre = nombreCompleto.split(" ");
+    const nombres = partesNombre.slice(0, -1).join(" ") || nombreCompleto;
+    const apellidos = partesNombre.slice(-1).join(" ") || "";
+
+    // Mapear campos según el modelo Congresista del backend
+    const congresistaParaBackend = {
+      nombres: nombres,
+      apellidos: apellidos,
+      dni: candidatoData.dni || "",
+      fotoUrl: candidatoData.foto || null,
+      region: candidatoData.distrito || "",
+      numeroEnLista: parseInt(candidatoData.numeroLista) || 1,
+      biografia: candidatoData.biografia || null,
+      propuestas: candidatoData.propuestas || null,
+      partidoPolitico: {
+        idPartido: idPartido
+      }
+    };
+
+    console.log("=== Creando congresista ===", congresistaParaBackend);
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.CREAR_CONGRESISTA}`, {
+      method: "POST",
+      headers: defaultHeaders,
+      body: JSON.stringify(congresistaParaBackend),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("=== Congresista creado exitosamente ===", data);
+    return data;
+  } catch (error) {
+    console.error("Error al crear congresista:", error);
+    throw error;
+  }
+};
+
+/**
+ * Crea un parlamentario andino en el backend
+ * @param {Object} candidatoData - Datos del candidato
+ * @returns {Promise<Object>} Parlamentario creado
+ */
+export const crearParlamentarioAndinoEnAPI = async (candidatoData) => {
+  try {
+    const idPartido = await obtenerIdPartidoPorNombre(candidatoData.partidoPolitico);
+    if (!idPartido) {
+      throw new Error(`No se encontró el partido: ${candidatoData.partidoPolitico}`);
+    }
+
+    // Separar nombre completo en nombres y apellidos
+    const nombreCompleto = candidatoData.nombre || candidatoData.nombreCompleto || "";
+    const partesNombre = nombreCompleto.split(" ");
+    const nombres = partesNombre.slice(0, -1).join(" ") || nombreCompleto;
+    const apellidos = partesNombre.slice(-1).join(" ") || "";
+
+    // Mapear campos según el modelo ParlamentoAndino del backend
+    // NOTA: El modelo ParlamentoAndino NO tiene biografia ni propuestas
+    const parlamentarioParaBackend = {
+      nombres: nombres,
+      apellidos: apellidos,
+      dni: candidatoData.dni || "",
+      fotoUrl: candidatoData.foto || null,
+      numeroEnLista: parseInt(candidatoData.numeroLista) || 1,
+      partidoPolitico: {
+        idPartido: idPartido
+      }
+    };
+
+    console.log("=== Creando parlamentario andino ===", parlamentarioParaBackend);
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.CREAR_PARLAMENTARIO}`, {
+      method: "POST",
+      headers: defaultHeaders,
+      body: JSON.stringify(parlamentarioParaBackend),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("=== Parlamentario andino creado exitosamente ===", data);
+    return data;
+  } catch (error) {
+    console.error("Error al crear parlamentario andino:", error);
+    throw error;
+  }
+};
+
+/**
+ * Crea un presidente/vicepresidente en el backend
+ * @param {Object} candidatoData - Datos del candidato
+ * @returns {Promise<Object>} Presidente creado
+ */
+export const crearPresidenteEnAPI = async (candidatoData) => {
+  try {
+    const idPartido = await obtenerIdPartidoPorNombre(candidatoData.partidoPolitico);
+    if (!idPartido) {
+      throw new Error(`No se encontró el partido: ${candidatoData.partidoPolitico}`);
+    }
+
+    // Separar nombre completo en nombres y apellidos
+    const nombreCompleto = candidatoData.nombre || candidatoData.nombreCompleto || "";
+    const partesNombre = nombreCompleto.split(" ");
+    const nombres = partesNombre.slice(0, -1).join(" ") || nombreCompleto;
+    const apellidos = partesNombre.slice(-1).join(" ") || "";
+
+    // Mapear campos según el modelo Presidente del backend
+    // NOTA: El modelo Presidente NO tiene dni
+    const presidenteParaBackend = {
+      nombres: nombres,
+      apellidos: apellidos,
+      fotoUrl: candidatoData.foto || null,
+      biografia: candidatoData.biografia || null,
+      propuestas: candidatoData.propuestas || null,
+      partidoPolitico: {
+        idPartido: idPartido
+      }
+    };
+
+    console.log("=== Creando presidente ===", presidenteParaBackend);
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.CREAR_PRESIDENTE}`, {
+      method: "POST",
+      headers: defaultHeaders,
+      body: JSON.stringify(presidenteParaBackend),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("=== Presidente creado exitosamente ===", data);
+    return data;
+  } catch (error) {
+    console.error("Error al crear presidente:", error);
+    throw error;
+  }
+};
+
+/**
+ * Crea un candidato en la tabla general de candidatos (para otros cargos)
+ * @param {Object} candidatoData - Datos del candidato
+ * @returns {Promise<Object>} Candidato creado
+ */
+const crearCandidatoGeneralEnAPI = async (candidatoData) => {
+  try {
+    const idPartido = await obtenerIdPartidoPorNombre(candidatoData.partidoPolitico);
+    if (!idPartido) {
+      throw new Error(`No se encontró el partido: ${candidatoData.partidoPolitico}`);
+    }
+
     const candidatoParaBackend = {
       idPartido: idPartido,
       nombreCompleto: candidatoData.nombre || candidatoData.nombreCompleto,
@@ -292,49 +447,22 @@ export const crearCandidatoEnAPI = async (candidatoData) => {
       estado: candidatoData.estado || "Activo",
     };
 
-    console.log("=== candidatoParaBackend ===", candidatoParaBackend);
-    console.log("=== URL ===", `${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.LISTAR}`);
-
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CANDIDATOS.LISTAR}`, {
       method: "POST",
       headers: defaultHeaders,
       body: JSON.stringify(candidatoParaBackend),
     });
 
-    console.log("=== Response status ===", response.status, response.statusText);
-
     if (!response.ok) {
-      let errorMessage = `Error ${response.status}: ${response.statusText}`;
-      try {
-        const errorData = await response.json();
-        console.error("=== Error data from backend ===", errorData);
-        errorMessage = errorData.message || errorData.error || errorMessage;
-        
-        // Si hay detalles adicionales, agregarlos
-        if (errorData.details) {
-          errorMessage += ` - ${errorData.details}`;
-        }
-      } catch (parseError) {
-        // Si no se puede parsear el JSON, intentar leer como texto
-        const textError = await response.text().catch(() => "");
-        if (textError) {
-          errorMessage += ` - ${textError}`;
-        }
-      }
-      throw new Error(errorMessage);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log("=== Candidato creado exitosamente ===", data);
     return data;
   } catch (error) {
-    console.error("=== Error completo al crear candidato ===", error);
-    // Si el error ya tiene un mensaje, lanzarlo tal cual
-    if (error.message) {
-      throw error;
-    }
-    // Si no, crear un mensaje más descriptivo
-    throw new Error(`Error al crear candidato: ${error.toString()}`);
+    console.error("Error al crear candidato general:", error);
+    throw error;
   }
 };
 
@@ -424,76 +552,96 @@ export const eliminarCandidatoEnAPI = async (idCandidato) => {
 };
 
 /**
- * Obtiene candidatos desde la API enriquecidos con datos del partido.
- * El backend ahora devuelve: idCandidato, nombreCompleto, foto, partidoNombre, partidoSimbolo, etc.
- * Si la API falla, retorna el fallback local.
+ * Obtiene candidatos desde la API para la página de votación.
+ * Los endpoints devuelven modelos específicos: Presidente, Congresista, ParlamentoAndino
  * @returns {Object} Objeto con candidatos organizados por categoría
  */
 export const fetchCandidatosParaVotacion = async () => {
   try {
     console.log("=== fetchCandidatosParaVotacion: Iniciando carga desde API ===");
     
-    // Llamadas paralelas a los endpoints (el backend devuelve datos enriquecidos)
+    // Obtener partidos para mapear IDs a nombres
+    const partidosData = await obtenerPartidosDesdeAPI();
+    const partidosMap = {};
+    partidosData.forEach(p => {
+      partidosMap[p.idPartido] = p.nombre;
+    });
+    
+    // Llamadas paralelas a los endpoints específicos
     const [presidenciales, congresistas, andinos] = await Promise.all([
-      fetchAPI(API_ENDPOINTS.CANDIDATOS.PRESIDENCIAL),
-      fetchAPI(API_ENDPOINTS.CANDIDATOS.CONGRESISTAS),
-      fetchAPI(API_ENDPOINTS.CANDIDATOS.ANDINOS),
+      fetchAPI(API_ENDPOINTS.CANDIDATOS.PRESIDENCIAL), // /api/presidentes
+      fetchAPI(API_ENDPOINTS.CANDIDATOS.CONGRESISTAS), // /api/congresistas
+      fetchAPI(API_ENDPOINTS.CANDIDATOS.ANDINOS), // /api/parlamento-andino
     ]);
 
     console.log("Presidenciales (raw):", presidenciales);
     console.log("Congresistas (raw):", congresistas);
     console.log("Andinos (raw):", andinos);
 
-    // Transformar presidenciales: el backend ya trae partidoNombre y partidoSimbolo
-    const activosPres = (presidenciales || []).filter(p => (p.estado || 'Activo') === 'Activo');
-    const presTransform = activosPres
-      .filter(pres => pres.cargo === 'Presidente')
-      .map((pres) => ({
-        id: pres.idCandidato,
-        nombre: pres.nombreCompleto || "",
-        partido: pres.idPartido,
-        partidoNombre: pres.partidoNombre || "Sin partido",
-        partidoSimbolo: pres.partidoSimbolo || "",
+    // Transformar presidentes: modelo Presidente (nombres, apellidos, id, fotoUrl, partidoPolitico)
+    const presTransform = (presidenciales || []).map((pres) => {
+      const nombreCompleto = `${pres.nombres || ""} ${pres.apellidos || ""}`.trim();
+      const idPartido = pres.partidoPolitico?.idPartido || pres.partidoPolitico?.id || null;
+      const partidoNombre = idPartido ? (partidosMap[idPartido] || "Sin partido") : "Sin partido";
+      
+      return {
+        id: pres.id,
+        nombre: nombreCompleto,
+        nombreCompleto: nombreCompleto,
+        partido: idPartido,
+        partidoNombre: partidoNombre,
+        partidoSimbolo: "", // Se puede obtener del partido si es necesario
         numero: 0,
-        foto: pres.foto || '',
-        propuestas: pres.propuestas || [],
+        foto: pres.fotoUrl || '',
+        propuestas: Array.isArray(pres.propuestas) ? pres.propuestas : [],
         biografia: pres.biografia || '',
-      }));
+      };
+    });
 
     console.log("Presidentes transformados:", presTransform);
 
-    // Transformar congresistas
-    const congresistasTransform = (congresistas || [])
-      .filter(c => c.estado === 'Activo')
-      .map((c) => ({
-        id: c.idCandidato,
-        nombre: c.nombreCompleto || "",
-        partido: c.idPartido,
-        partidoNombre: c.partidoNombre || "Sin partido",
-        partidoSimbolo: c.partidoSimbolo || "",
-        numero: 0,
-        foto: c.foto || '',
-        distrito: c.distrito || 'N/D',
-        propuestas: c.propuestas || [],
+    // Transformar congresistas: modelo Congresista (nombres, apellidos, id, fotoUrl, region, partidoPolitico)
+    const congresistasTransform = (congresistas || []).map((c) => {
+      const nombreCompleto = `${c.nombres || ""} ${c.apellidos || ""}`.trim();
+      const idPartido = c.partidoPolitico?.idPartido || c.partidoPolitico?.id || null;
+      const partidoNombre = idPartido ? (partidosMap[idPartido] || "Sin partido") : "Sin partido";
+      
+      return {
+        id: c.id,
+        nombre: nombreCompleto,
+        nombreCompleto: nombreCompleto,
+        partido: idPartido,
+        partidoNombre: partidoNombre,
+        partidoSimbolo: "",
+        numero: c.numeroEnLista || 0,
+        foto: c.fotoUrl || '',
+        distrito: c.region || 'N/D',
+        propuestas: Array.isArray(c.propuestas) ? c.propuestas : [],
         biografia: c.biografia || '',
-      }));
+      };
+    });
 
     console.log("Congresistas transformados:", congresistasTransform);
 
-    // Transformar parlamentarios andinos
-    const andinosTransform = (andinos || [])
-      .filter(c => c.estado === 'Activo')
-      .map((c) => ({
-        id: c.idCandidato,
-        nombre: c.nombreCompleto || "",
-        partido: c.idPartido,
-        partidoNombre: c.partidoNombre || "Sin partido",
-        partidoSimbolo: c.partidoSimbolo || "",
-        numero: 0,
-        foto: c.foto || '',
-        propuestas: c.propuestas || [],
-        biografia: c.biografia || '',
-      }));
+    // Transformar parlamentarios andinos: modelo ParlamentoAndino (nombres, apellidos, id, fotoUrl, partidoPolitico)
+    const andinosTransform = (andinos || []).map((c) => {
+      const nombreCompleto = `${c.nombres || ""} ${c.apellidos || ""}`.trim();
+      const idPartido = c.partidoPolitico?.idPartido || c.partidoPolitico?.id || null;
+      const partidoNombre = idPartido ? (partidosMap[idPartido] || "Sin partido") : "Sin partido";
+      
+      return {
+        id: c.id,
+        nombre: nombreCompleto,
+        nombreCompleto: nombreCompleto,
+        partido: idPartido,
+        partidoNombre: partidoNombre,
+        partidoSimbolo: "",
+        numero: c.numeroEnLista || 0,
+        foto: c.fotoUrl || '',
+        propuestas: [],
+        biografia: '',
+      };
+    });
 
     console.log("Andinos transformados:", andinosTransform);
 
@@ -504,7 +652,11 @@ export const fetchCandidatosParaVotacion = async () => {
     };
   } catch (error) {
     console.error('Error en fetchCandidatosParaVotacion:', error);
-    console.warn('Usando fallback local:', error);
-    return getCandidatosParaVotacion();
+    console.warn('Retornando arrays vacíos en caso de error');
+    return {
+      presidente: [],
+      congresistas: [],
+      parlamentoAndino: [],
+    };
   }
 };

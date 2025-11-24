@@ -18,6 +18,7 @@ export default function CandidatoCrear({ isOpen, onClose, onSave, partidos, carg
     foto: "",
     estado: "Activo",
     distrito: "",
+    dni: "",
     biografia: "",
     propuestas: "",
   });
@@ -153,9 +154,20 @@ export default function CandidatoCrear({ isOpen, onClose, onSave, partidos, carg
             options={cargos}
           />
 
+          {(formData.cargo === "Congresista" || formData.cargo === "Parlamentario Andino") && (
+            <FormInput
+              label="DNI *"
+              name="dni"
+              value={formData.dni || ""}
+              onChange={handleChange}
+              placeholder="12345678"
+              required
+            />
+          )}
+
           {formData.cargo === "Congresista" && (
             <FormSelect
-              label="Distrito *"
+              label="Distrito/Región *"
               name="distrito"
               value={formData.distrito}
               onChange={handleChange}

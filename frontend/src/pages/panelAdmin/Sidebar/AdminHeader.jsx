@@ -6,6 +6,8 @@ const AdminHeader = ({ toggleSidebar, isCollapsed }) => {
     // Limpiar todas las variables de autenticación
     localStorage.removeItem("adminAuth");
     localStorage.removeItem("adminUser");
+    localStorage.removeItem("adminRol");
+    localStorage.removeItem("adminPermisos");
     localStorage.removeItem("token");
     localStorage.removeItem("userName");
     // Redirigir al login

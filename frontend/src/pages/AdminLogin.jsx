@@ -1,5 +1,4 @@
 import { useState } from "react";
-// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,8 +7,8 @@ import {
   User,
   AlertCircle,
   ArrowRight,
-  Vote,
 } from "lucide-react";
+import { obtenerPermisosDeRol } from "../utils/authUtils";
 
 export default function AdminLogin() {
   const [usuario, setUsuario] = useState("");
@@ -18,10 +17,47 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Credenciales de ejemplo - en producción esto vendría de una API segura
-  const adminCredentials = {
-    usuario: "admin",
-    password: "admin123",
+  // Obtener usuarios del sistema
+  const obtenerUsuarios = () => {
+    try {
+      const usuariosStored = localStorage.getItem("usuarios");
+      if (usuariosStored) {
+        return JSON.parse(usuariosStored);
+      }
+      // Si no hay usuarios, usar los iniciales
+      return [
+        {
+          id: 1,
+          nombre: "Juan Pérez",
+          dni: "12345678",
+          email: "juan.perez@onpe.gob.pe",
+          rol: "Super Admin",
+          departamento: "Lima",
+          estado: "Activo",
+        },
+        {
+          id: 2,
+          nombre: "María García",
+          dni: "87654321",
+          email: "maria.garcia@onpe.gob.pe",
+          rol: "Admin Regional",
+          departamento: "Cusco",
+          estado: "Activo",
+        },
+        {
+          id: 3,
+          nombre: "Carlos López",
+          dni: "11223344",
+          email: "carlos.lopez@onpe.gob.pe",
+          rol: "Presidente de Mesa",
+          departamento: "Arequipa",
+          estado: "Activo",
+        },
+      ];
+    } catch (error) {
+      console.error("Error al obtener usuarios:", error);
+      return [];
+    }
   };
 
   const handleLogin = (e) => {
@@ -31,16 +67,28 @@ export default function AdminLogin() {
 
     // Simulación de autenticación
     setTimeout(() => {
-      if (
-        usuario === adminCredentials.usuario &&
-        password === adminCredentials.password
-      ) {
-        // Guardar sesión en localStorage
+      const usuarios = obtenerUsuarios();
+      
+      // Buscar usuario por email o DNI
+      const usuarioEncontrado = usuarios.find(
+        (u) => 
+          (u.email === usuario || u.dni === usuario) && 
+          u.estado === "Activo"
+      );
+
+      if (usuarioEncontrado) {
+        // Obtener permisos del rol
+        const permisos = obtenerPermisosDeRol(usuarioEncontrado.rol);
+        
+        // Guardar sesión completa
         localStorage.setItem("adminAuth", "true");
-        localStorage.setItem("adminUser", usuario);
+        localStorage.setItem("adminUser", JSON.stringify(usuarioEncontrado));
+        localStorage.setItem("adminRol", usuarioEncontrado.rol);
+        localStorage.setItem("adminPermisos", JSON.stringify(permisos));
+        
         navigate("/admin");
       } else {
-        setError("Usuario o contraseña incorrectos");
+        setError("Usuario no encontrado o inactivo");
         setLoading(false);
       }
     }, 1000);
@@ -88,7 +136,7 @@ export default function AdminLogin() {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Usuario
+                Usuario (Email o DNI)
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -99,7 +147,7 @@ export default function AdminLogin() {
                     setUsuario(e.target.value);
                     setError("");
                   }}
-                  placeholder="Ingresa tu usuario"
+                  placeholder="Ingresa tu email o DNI"
                   className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] focus:border-transparent outline-none"
                   required
                 />
@@ -143,14 +191,6 @@ export default function AdminLogin() {
                 </>
               )}
             </button>
-            
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold transition-all mt-3 flex items-center justify-center gap-2"
-            >
-              Volver
-            </button>
           </form>
 
           {/* Información de seguridad */}
@@ -169,10 +209,10 @@ export default function AdminLogin() {
             </div>
           </div>
 
-          {/* Nota de credenciales (solo para desarrollo) */}
+          {/* Nota de usuarios de prueba */}
           <div className="mt-4 text-center">
             <p className="text-xs text-gray-500">
-              Usuario: admin | Contraseña: admin123
+              Usuarios de prueba: juan.perez@onpe.gob.pe, maria.garcia@onpe.gob.pe, carlos.lopez@onpe.gob.pe
             </p>
           </div>
         </div>

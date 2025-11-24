@@ -11,12 +11,35 @@ import {
   Shield,         // Auditoría
   UserCheck,      // Padrón Electoral
   Brain,          // Análisis de Datos
-  Flag,           // Partidos
   KeyRound,       // Roles y Permisos
 } from 'lucide-react';
+import { obtenerPermisosUsuario } from '../../../utils/authUtils';
 
 const AdminSidebar = ({ isCollapsed = false }) => {
   const location = useLocation();
+  const permisos = obtenerPermisosUsuario();
+
+  // Mapeo de items a permisos requeridos
+  const mapeoPermisos = {
+    dashboard: "Dashboard",
+    usuarios: "Usuarios",
+    roles: "Usuarios", // Solo usuarios con permiso "Usuarios" pueden ver roles
+    candidatos: "Candidatos",
+    "padron-electoral": "Padrón Electoral",
+    centros: "Centros",
+    resultados: "Resultados",
+    analisis: "Análisis de Datos",
+    reportes: "Reportes",
+    configuracion: "Configuración",
+    auditoria: "Auditoría",
+  };
+
+  // Función para verificar si el usuario tiene permiso para ver un item
+  const tienePermisoParaItem = (itemId) => {
+    const permisoRequerido = mapeoPermisos[itemId];
+    if (!permisoRequerido) return true; // Si no hay permiso requerido, permitir acceso
+    return permisos.includes(permisoRequerido);
+  };
 
   // Menú organizado por categorías lógicas
   const menuSections = [
@@ -24,45 +47,50 @@ const AdminSidebar = ({ isCollapsed = false }) => {
       id: "principal",
       label: "Principal",
       items: [
-        { id: "dashboard", label: "Dashboard", icon: BarChart3, path: "/admin" },
+        { id: "dashboard", label: "Dashboard", icon: BarChart3, path: "/admin", permiso: "Dashboard" },
       ]
     },
     {
       id: "gestion-usuarios",
       label: "Gestión de Usuarios",
       items: [
-        { id: "usuarios", label: "Usuarios", icon: Users, path: "/admin/usuarios" },
-        { id: "roles", label: "Roles y Permisos", icon: KeyRound, path: "/admin/roles" },
+        { id: "usuarios", label: "Usuarios", icon: Users, path: "/admin/usuarios", permiso: "Usuarios" },
+        { id: "roles", label: "Roles y Permisos", icon: KeyRound, path: "/admin/roles", permiso: "Usuarios" },
       ]
     },
     {
       id: "gestion-electoral",
       label: "Gestión Electoral",
       items: [
-        { id: "candidatos", label: "Candidatos", icon: UserSquare2, path: "/admin/candidatos" },
-        { id: "partidos", label: "Partidos", icon: Flag, path: "/admin/partidos" },
-        { id: "padron-electoral", label: "Padrón Electoral", icon: UserCheck, path: "/admin/padron-electoral" },
-        { id: "centros", label: "Centros de Votación", icon: Building2, path: "/admin/centros" },
+        { id: "candidatos", label: "Candidatos", icon: UserSquare2, path: "/admin/candidatos", permiso: "Candidatos" },
+        { id: "padron-electoral", label: "Padrón Electoral", icon: UserCheck, path: "/admin/padron-electoral", permiso: "Padrón Electoral" },
+        { id: "centros", label: "Centros de Votación", icon: Building2, path: "/admin/centros", permiso: "Centros" },
       ]
     },
     {
       id: "resultados-analisis",
       label: "Resultados y Análisis",
       items: [
-        { id: "resultados", label: "Resultados", icon: TrendingUp, path: "/admin/resultados" },
-        { id: "analisis", label: "Análisis de Datos", icon: Brain, path: "/admin/analisis" },
-        { id: "reportes", label: "Reportes", icon: FileText, path: "/admin/reportes" },
+        { id: "resultados", label: "Resultados", icon: TrendingUp, path: "/admin/resultados", permiso: "Resultados" },
+        { id: "analisis", label: "Análisis de Datos", icon: Brain, path: "/admin/analisis", permiso: "Análisis de Datos" },
+        { id: "reportes", label: "Reportes", icon: FileText, path: "/admin/reportes", permiso: "Reportes" },
       ]
     },
     {
       id: "sistema",
       label: "Sistema",
       items: [
-        { id: "configuracion", label: "Configuración", icon: Settings, path: "/admin/configuracion" },
-        { id: "auditoria", label: "Auditoría", icon: Shield, path: "/admin/auditoria" },
+        { id: "configuracion", label: "Configuración", icon: Settings, path: "/admin/configuracion", permiso: "Configuración" },
+        { id: "auditoria", label: "Auditoría", icon: Shield, path: "/admin/auditoria", permiso: "Auditoría" },
       ]
     },
   ];
+
+  // Filtrar items según permisos
+  const menuSectionsFiltrado = menuSections.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => tienePermisoParaItem(item.id)),
+  })).filter((section) => section.items.length > 0); // Solo mostrar secciones que tengan al menos un item
 
   // Función para verificar si una ruta está activa
   const isActive = (item) => {
@@ -93,7 +121,7 @@ const AdminSidebar = ({ isCollapsed = false }) => {
 
       {/* Navegación mejorada */}
       <nav className="mt-4 pb-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
-        {menuSections.map((section, sectionIndex) => (
+        {menuSectionsFiltrado.map((section, sectionIndex) => (
           <div key={section.id} className={sectionIndex > 0 ? "mt-6" : ""}>
             {/* Título de sección (solo si no está colapsado) */}
             {!isCollapsed && (
