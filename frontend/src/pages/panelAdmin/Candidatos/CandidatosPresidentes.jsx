@@ -9,6 +9,7 @@ import CandidatoEditar from "./CandidatoEditar";
 import CandidatoEliminar from "./CandidatoEliminar";
 import CandidatoVerPropuestas from "./CandidatoVerPropuestas";
 import { crearCandidatoEnAPI, actualizarCandidatoEnAPI, eliminarCandidatoEnAPI } from "../../../services/candidatosService";
+import { registrarExito, registrarError } from "../../../services/auditoriaService";
 import { CARGOS_ELECTORALES } from "../../../constants/electoralConstants";
 import { obtenerPartidos } from "../../../services/partidosService";
 
@@ -148,8 +149,16 @@ export default function CandidatosPresidentes() {
       };
       
       await cargarCandidatos();
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Crear Candidato Presidente",
+        `Presidente creado: ${nuevoCandidato.nombre || nuevoCandidato.nombreCompleto} - Partido: ${nuevoCandidato.partidoPolitico}`,
+        { tipo: "Presidente", partido: nuevoCandidato.partidoPolitico }
+      );
     } catch (error) {
       console.error("Error al crear candidato:", error);
+      registrarError("Crear Candidato Presidente", `Error al crear presidente: ${error.message}`);
       alert(`Error al crear presidente: ${error.message}`);
       throw error;
     }
@@ -158,10 +167,19 @@ export default function CandidatosPresidentes() {
   const handleEditar = async (candidatoActualizado) => {
     try {
       await actualizarCandidatoEnAPI(candidatoActualizado.idCandidato, candidatoActualizado);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Editar Candidato Presidente",
+        `Presidente editado: ${candidatoActualizado.nombre || candidatoActualizado.nombreCompleto} (ID: ${candidatoActualizado.idCandidato})`,
+        { tipo: "Presidente", candidatoId: candidatoActualizado.idCandidato }
+      );
+      
       // Recargar candidatos
       window.location.reload();
     } catch (error) {
       console.error("Error al actualizar candidato:", error);
+      registrarError("Editar Candidato Presidente", `Error al editar presidente: ${error.message}`);
       throw error;
     }
   };
@@ -175,6 +193,14 @@ export default function CandidatosPresidentes() {
         throw new Error("ID del candidato no encontrado");
       }
       await eliminarCandidatoEnAPI(idCandidato);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Eliminar Candidato Presidente",
+        `Presidente eliminado: ${selectedCandidate.nombre || selectedCandidate.nombreCompleto} (ID: ${idCandidato})`,
+        { tipo: "Presidente", candidatoId: idCandidato }
+      );
+      
       // Recargar la página para actualizar la lista
       window.location.reload();
     } catch (error) {

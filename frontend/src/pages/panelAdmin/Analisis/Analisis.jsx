@@ -36,7 +36,7 @@ export default function Analisis() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Datos simulados para análisis (se actualizarán con datos reales)
+  // Datos de análisis (cargados desde la API)
   const [analisisData, setAnalisisData] = useState({
     totalRegistros: 0,
     registrosLimpios: 0,
@@ -50,12 +50,12 @@ export default function Analisis() {
   const [tendenciaTemporal, setTendenciaTemporal] = useState([]);
   const [prediccionesPartidos, setPrediccionesPartidos] = useState([]);
 
-  // Cargar datos de gráficos cuando se muestren los resultados
+  // Cargar datos de gráficos cuando se muestren los resultados o cambie el dataset limpio
   useEffect(() => {
-    if (showResults) {
+    if (showResults && selectedLimpioId) {
       cargarDatosGraficos();
     }
-  }, [showResults]);
+  }, [showResults, selectedLimpioId]);
 
   const cargarDatosGraficos = async () => {
     try {
@@ -84,77 +84,70 @@ export default function Analisis() {
 
       // Transformar datos de distribución para el gráfico (API devuelve {label, value})
       if (distribucion && Array.isArray(distribucion) && distribucion.length > 0) {
-        const distribucionTransformada = distribucion.map((item) => ({
-          region: item.label,
-          votos: item.value,
-          porcentaje: item.value, // Ajustar según necesidad
-        }));
+        const distribucionTransformada = distribucion
+          .filter((item) => item && (item.label || item.region) && (item.value || item.votos)) // Solo incluir items con datos válidos
+          .map((item) => ({
+            region: item.label || item.region || "",
+            votos: item.value || item.votos || 0,
+            porcentaje: item.porcentaje || 0,
+          }));
         setDistribucionPorRegion(distribucionTransformada);
       } else {
-        console.warn("No se recibieron datos de distribución, usando datos de ejemplo");
-        // Datos de ejemplo como fallback
-        setDistribucionPorRegion([
-          { region: "Lima", votos: 3200000, porcentaje: 25.1 },
-          { region: "Cusco", votos: 890000, porcentaje: 7.0 },
-          { region: "Arequipa", votos: 750000, porcentaje: 5.9 },
-          { region: "Piura", votos: 680000, porcentaje: 5.3 },
-          { region: "Junín", votos: 520000, porcentaje: 4.1 },
-          { region: "Loreto", votos: 410000, porcentaje: 3.2 },
-        ]);
+        console.warn("No se recibieron datos de distribución desde la API");
+        setDistribucionPorRegion([]);
       }
 
       // Transformar datos de tendencia (API devuelve {label, value})
       if (tendencia && Array.isArray(tendencia) && tendencia.length > 0) {
-        const tendenciaTransformada = tendencia.map((item) => ({
-          hora: item.label,
-          participacion: item.value,
-        }));
+        const tendenciaTransformada = tendencia
+          .filter((item) => item && (item.label || item.hora || item.tiempo) && (item.value || item.participacion !== undefined)) // Solo incluir items con datos válidos
+          .map((item) => ({
+            hora: item.label || item.hora || item.tiempo || "",
+            participacion: item.value || item.participacion || 0,
+          }));
         setTendenciaTemporal(tendenciaTransformada);
       } else {
         console.warn("No se recibieron datos de tendencia desde la API");
         setTendenciaTemporal([]);
       }
 
-      // Transformar predicciones si es necesario
+      // Transformar predicciones del modelo entrenado
+      // El backend devuelve PartidoPredictionDTO: { partido: string, prediccion: number, confianza: number, estado: string }
       if (predicciones && Array.isArray(predicciones) && predicciones.length > 0) {
-        setPrediccionesPartidos(predicciones);
+        const prediccionesTransformadas = predicciones
+          .filter((item) => {
+            // Solo incluir items que tengan partido Y predicción válidos
+            return item && item.partido && (item.prediccion !== undefined && item.prediccion !== null);
+          })
+          .map((item) => {
+            // El backend ya devuelve prediccion como porcentaje (Double)
+            // y confianza como Integer (0-100)
+            return {
+              partido: item.partido || "",
+              nombre: item.partido || "", // Usar partido como nombre también
+              prediccion: Number((item.prediccion || 0).toFixed(2)),
+              confianza: item.confianza !== undefined && item.confianza !== null ? item.confianza : 0,
+              estado: item.estado || "", // Estado viene del backend (Alta, Media, Baja)
+            };
+          })
+          .filter((item) => item.partido && item.prediccion > 0) // Solo items válidos
+          .sort((a, b) => b.prediccion - a.prediccion); // Ordenar por predicción descendente (ya viene ordenado del backend, pero por si acaso)
+        
+        console.log("Predicciones transformadas:", prediccionesTransformadas);
+        setPrediccionesPartidos(prediccionesTransformadas);
       } else {
-        console.warn("No se recibieron predicciones desde la API");
+        console.warn("No se recibieron predicciones desde la API. Asegúrate de haber entrenado el modelo primero.");
         setPrediccionesPartidos([]);
       }
     } catch (err) {
       console.error("Error al cargar datos de gráficos:", err);
       const errorMessage = err.message || "Error al cargar datos de análisis";
-      setError(`⚠️ ${errorMessage}. Mostrando datos de ejemplo.`);
+      setError(`⚠️ ${errorMessage}. Por favor, verifica que el modelo haya sido entrenado y que el dataset limpio esté disponible.`);
       
-      // Usar datos de ejemplo cuando la API falla
-      setDistribucionPorRegion([
-        { region: "Lima", votos: 3200000, porcentaje: 25.1 },
-        { region: "Cusco", votos: 890000, porcentaje: 7.0 },
-        { region: "Arequipa", votos: 750000, porcentaje: 5.9 },
-        { region: "Piura", votos: 680000, porcentaje: 5.3 },
-        { region: "Junín", votos: 520000, porcentaje: 4.1 },
-        { region: "Loreto", votos: 410000, porcentaje: 3.2 },
-      ]);
-      
-      setTendenciaTemporal([
-        { hora: "08:00", participacion: 12 },
-        { hora: "10:00", participacion: 28 },
-        { hora: "12:00", participacion: 45 },
-        { hora: "14:00", participacion: 58 },
-        { hora: "16:00", participacion: 68 },
-        { hora: "18:00", participacion: 73 },
-      ]);
-      
-      setPrediccionesPartidos([
-        { partido: "FP", nombre: "Fuerza Popular", prediccion: 18.5, confianza: 92 },
-        { partido: "RP", nombre: "Renovación Popular", prediccion: 15.2, confianza: 89 },
-        { partido: "AP", nombre: "Acción Popular", prediccion: 12.8, confianza: 87 },
-        { partido: "APP", nombre: "Alianza para el Progreso", prediccion: 11.3, confianza: 85 },
-        { partido: "JPP", nombre: "Juntos por el Perú", prediccion: 9.7, confianza: 83 },
-        { partido: "PM", nombre: "Partido Morado", prediccion: 8.4, confianza: 81 },
-        { partido: "UN", nombre: "Unidad Nacional", prediccion: 7.2, confianza: 79 },
-      ]);
+      // No usar datos simulados, dejar arrays vacíos
+      setDistribucionPorRegion([]);
+      setTendenciaTemporal([]);
+      setPrediccionesPartidos([]);
     } finally {
       setLoading(false);
     }
@@ -178,8 +171,32 @@ export default function Analisis() {
     });
   };
 
-  const handleTrainingComplete = (metrics) => {
+  const handleTrainingComplete = async (metrics) => {
     setTrainingMetrics(metrics);
+    // Recargar predicciones inmediatamente después del entrenamiento
+    if (selectedLimpioId && showResults) {
+      try {
+        const predicciones = await obtenerPredicciones(selectedLimpioId);
+        if (predicciones && Array.isArray(predicciones) && predicciones.length > 0) {
+          // El backend devuelve PartidoPredictionDTO: { partido, prediccion, confianza, estado }
+          const prediccionesTransformadas = predicciones
+            .filter((item) => item && item.partido && item.prediccion !== undefined && item.prediccion !== null)
+            .map((item) => ({
+              partido: item.partido || "",
+              nombre: item.partido || "",
+              prediccion: Number((item.prediccion || 0).toFixed(2)),
+              confianza: item.confianza !== undefined && item.confianza !== null ? item.confianza : 0,
+              estado: item.estado || "",
+            }))
+            .filter((item) => item.partido && item.prediccion > 0)
+            .sort((a, b) => b.prediccion - a.prediccion);
+          
+          setPrediccionesPartidos(prediccionesTransformadas);
+        }
+      } catch (error) {
+        console.error("Error al cargar predicciones después del entrenamiento:", error);
+      }
+    }
   };
 
   const handleNext = () => {
@@ -418,9 +435,24 @@ export default function Analisis() {
           {prediccionesPartidos.length > 0 ? (
             <PredictionChart data={prediccionesPartidos} />
           ) : (
-            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-              <p className="text-gray-500 text-center">No hay predicciones disponibles</p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white p-6 rounded-xl shadow-lg border border-gray-200"
+            >
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 bg-indigo-50 rounded-full mb-4">
+                  <TrendingUp className="w-8 h-8 text-indigo-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay predicciones disponibles</h3>
+                <p className="text-sm text-gray-600 max-w-md">
+                  {selectedLimpioId 
+                    ? "Las predicciones aparecerán aquí una vez que hayas entrenado el modelo de machine learning. Asegúrate de completar el paso de entrenamiento."
+                    : "Para ver las predicciones, primero debes cargar un dataset, limpiarlo y entrenar el modelo."}
+                </p>
+              </div>
+            </motion.div>
           )}
 
           {/* Tabla de resumen */}

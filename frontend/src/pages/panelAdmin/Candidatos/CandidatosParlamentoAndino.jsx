@@ -9,6 +9,7 @@ import CandidatoEditar from "./CandidatoEditar";
 import CandidatoEliminar from "./CandidatoEliminar";
 import CandidatoVerPropuestas from "./CandidatoVerPropuestas";
 import { crearCandidatoEnAPI, actualizarCandidatoEnAPI, eliminarCandidatoEnAPI } from "../../../services/candidatosService";
+import { registrarExito, registrarError } from "../../../services/auditoriaService";
 import { CARGOS_ELECTORALES } from "../../../constants/electoralConstants";
 import { obtenerPartidos } from "../../../services/partidosService";
 
@@ -153,8 +154,16 @@ export default function CandidatosParlamentoAndino() {
       };
       
       await cargarCandidatos();
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Crear Candidato Parlamento Andino",
+        `Parlamentario Andino creado: ${nuevoCandidato.nombre || nuevoCandidato.nombreCompleto} - Partido: ${nuevoCandidato.partidoPolitico}`,
+        { tipo: "Parlamento Andino", partido: nuevoCandidato.partidoPolitico }
+      );
     } catch (error) {
       console.error("Error al crear candidato:", error);
+      registrarError("Crear Candidato Parlamento Andino", `Error al crear parlamentario andino: ${error.message}`);
       alert(`Error al crear parlamentario andino: ${error.message}`);
       throw error;
     }
@@ -163,9 +172,18 @@ export default function CandidatosParlamentoAndino() {
   const handleEditar = async (candidatoActualizado) => {
     try {
       await actualizarCandidatoEnAPI(candidatoActualizado.idCandidato, candidatoActualizado);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Editar Candidato Parlamento Andino",
+        `Parlamentario Andino editado: ${candidatoActualizado.nombre || candidatoActualizado.nombreCompleto} (ID: ${candidatoActualizado.idCandidato})`,
+        { tipo: "Parlamento Andino", candidatoId: candidatoActualizado.idCandidato }
+      );
+      
       window.location.reload();
     } catch (error) {
       console.error("Error al actualizar candidato:", error);
+      registrarError("Editar Candidato Parlamento Andino", `Error al editar parlamentario andino: ${error.message}`);
       throw error;
     }
   };
@@ -179,6 +197,14 @@ export default function CandidatosParlamentoAndino() {
         throw new Error("ID del candidato no encontrado");
       }
       await eliminarCandidatoEnAPI(idCandidato);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Eliminar Candidato Parlamento Andino",
+        `Parlamentario Andino eliminado: ${selectedCandidate.nombre || selectedCandidate.nombreCompleto} (ID: ${idCandidato})`,
+        { tipo: "Parlamento Andino", candidatoId: idCandidato }
+      );
+      
       // Recargar la página para actualizar la lista
       window.location.reload();
     } catch (error) {

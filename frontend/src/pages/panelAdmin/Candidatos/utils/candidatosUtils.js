@@ -2,17 +2,17 @@
  * Utilidades compartidas para los componentes de candidatos
  */
 
-import fotoRLA from "../../../../assets/images/rafael_lopez_aliaga.jpg";
-import fotoKeiko from "../../../../assets/images/keiko_fujimori.jpg";
-import fotoAcuna from "../../../../assets/images/cesar_acuna.jpg";
-import fotoAlvarez from "../../../../assets/images/carlos_alvarez.jpg";
-import fotoLopezChau from "../../../../assets/images/alfonso_lopez_chau.jpg";
-import fotoButters from "../../../../assets/images/phillip_butters.jpg";
-import fotoPerezTello from "../../../../assets/images/marisol_perez_tello.jpg";
-import fotoNormaYarrow from "../../../../assets/images/norma_yarrow_lumbreras.jpg";
-import fotoJoseCueto from "../../../../assets/images/jose_cueto_aservi.jpg";
-import fotoJorgeMontoya from "../../../../assets/images/jorge_montoya_manrique.jpg";
-import fotoJulioChavez from "../../../../assets/images/Julio_Chavez.jpg";
+import fotoRLA from "../../../../assets/logos/images/rafael_lopez_aliaga.jpg";
+import fotoKeiko from "../../../../assets/logos/images/keiko_fujimori.jpg";
+import fotoAcuna from "../../../../assets/logos/images/cesar_acuna.jpg";
+import fotoAlvarez from "../../../../assets/logos/images/carlos_alvarez.jpg";
+import fotoLopezChau from "../../../../assets/logos/images/alfonso_lopez_chau.jpg";
+import fotoButters from "../../../../assets/logos/images/phillip_butters.jpg";
+import fotoPerezTello from "../../../../assets/logos/images/marisol_perez_tello.jpg";
+import fotoNormaYarrow from "../../../../assets/logos/images/norma_yarrow_lumbreras.jpg";
+import fotoJoseCueto from "../../../../assets/logos/images/jose_cueto_aservi.jpg";
+import fotoJorgeMontoya from "../../../../assets/logos/images/jorge_montoya_manrique.jpg";
+import fotoJulioChavez from "../../../../assets/logos/images/Julio_Chavez.jpg";
 
 import logoRenovacion from "../../../../assets/logos/renovacion_popular.png";
 import logoFuerza from "../../../../assets/logos/fuerza_popular.png";

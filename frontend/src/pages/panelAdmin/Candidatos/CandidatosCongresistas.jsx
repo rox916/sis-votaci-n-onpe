@@ -9,6 +9,7 @@ import CandidatoEditar from "./CandidatoEditar";
 import CandidatoEliminar from "./CandidatoEliminar";
 import CandidatoVerPropuestas from "./CandidatoVerPropuestas";
 import { crearCandidatoEnAPI, actualizarCandidatoEnAPI, eliminarCandidatoEnAPI } from "../../../services/candidatosService";
+import { registrarExito, registrarError } from "../../../services/auditoriaService";
 import { CARGOS_ELECTORALES } from "../../../constants/electoralConstants";
 import { obtenerPartidos } from "../../../services/partidosService";
 
@@ -148,8 +149,16 @@ export default function CandidatosCongresistas() {
       };
       
       await cargarCandidatos();
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Crear Candidato Congresista",
+        `Congresista creado: ${nuevoCandidato.nombre || nuevoCandidato.nombreCompleto} - Partido: ${nuevoCandidato.partidoPolitico} - Región: ${nuevoCandidato.distrito || nuevoCandidato.region}`,
+        { tipo: "Congresista", partido: nuevoCandidato.partidoPolitico, region: nuevoCandidato.distrito || nuevoCandidato.region }
+      );
     } catch (error) {
       console.error("Error al crear candidato:", error);
+      registrarError("Crear Candidato Congresista", `Error al crear congresista: ${error.message}`);
       alert(`Error al crear congresista: ${error.message}`);
       throw error;
     }
@@ -158,9 +167,18 @@ export default function CandidatosCongresistas() {
   const handleEditar = async (candidatoActualizado) => {
     try {
       await actualizarCandidatoEnAPI(candidatoActualizado.idCandidato, candidatoActualizado);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Editar Candidato Congresista",
+        `Congresista editado: ${candidatoActualizado.nombre || candidatoActualizado.nombreCompleto} (ID: ${candidatoActualizado.idCandidato})`,
+        { tipo: "Congresista", candidatoId: candidatoActualizado.idCandidato }
+      );
+      
       window.location.reload();
     } catch (error) {
       console.error("Error al actualizar candidato:", error);
+      registrarError("Editar Candidato Congresista", `Error al editar congresista: ${error.message}`);
       throw error;
     }
   };
@@ -174,6 +192,14 @@ export default function CandidatosCongresistas() {
         throw new Error("ID del candidato no encontrado");
       }
       await eliminarCandidatoEnAPI(idCandidato);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Eliminar Candidato Congresista",
+        `Congresista eliminado: ${selectedCandidate.nombre || selectedCandidate.nombreCompleto} (ID: ${idCandidato})`,
+        { tipo: "Congresista", candidatoId: idCandidato }
+      );
+      
       // Recargar la página para actualizar la lista
       window.location.reload();
     } catch (error) {

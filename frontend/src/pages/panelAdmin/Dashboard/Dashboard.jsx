@@ -10,7 +10,13 @@ import {
   MapPin,
 } from "lucide-react";
 // Importar servicios de análisis
-import { obtenerDistribucionPorRegion, obtenerTendenciaParticipacion } from "../../../services/analisisService";
+import { 
+  obtenerDistribucionPorRegion, 
+  obtenerTendenciaParticipacion,
+  obtenerKPIsVotantes,
+  obtenerResultadosPorPartido,
+  obtenerParticipacionPorRegion,
+} from "../../../services/analisisService";
 import {
   BarChart,
   Bar,
@@ -22,6 +28,7 @@ import {
   Line,
   CartesianGrid,
   Legend,
+  Cell,
 } from "recharts";
 import * as d3 from "d3";
 
@@ -45,7 +52,7 @@ export default function Dashboard() {
   const [distribucionData, setDistribucionData] = useState([]);
   const [loadingGraficos, setLoadingGraficos] = useState(false);
   
-  // Estados para estadísticas (si hay API, se cargarán desde allí)
+  // Estados para estadísticas (cargadas desde la API)
   const [estadisticas, setEstadisticas] = useState({
     mesasProcesadas: 0,
     votantesRegistrados: 0,
@@ -53,53 +60,117 @@ export default function Dashboard() {
     incidencias: 0,
   });
   
-  // Estados para resultados (si hay API, se cargarán desde allí)
+  // Estados para resultados (cargados desde la API)
   const [resultadosPartidos, setResultadosPartidos] = useState([]);
   const [resultadosPorRegion, setResultadosPorRegion] = useState({});
+  const [loadingEstadisticas, setLoadingEstadisticas] = useState(false);
 
-  // Cargar datos de gráficos al montar el componente
+  // Cargar datos del Dashboard al montar el componente
   useEffect(() => {
-    cargarDatosGraficos();
+    cargarDatosDashboard();
   }, []);
 
-  const cargarDatosGraficos = async () => {
+  // Función para cargar todos los datos del Dashboard desde la API
+  const cargarDatosDashboard = async () => {
     try {
-      setLoadingGraficos(true);
-      // El Dashboard no tiene un idLimpio seleccionado, por lo que no puede cargar estos datos
-      // Estos endpoints requieren idLimpio como parámetro obligatorio
-      // Por ahora, dejamos arrays vacíos hasta que se implemente la selección de dataset
-      console.warn("Dashboard: Los endpoints de análisis requieren idLimpio, no se pueden cargar sin seleccionar un dataset");
-      const distribucion = [];
-      const tendencia = [];
-
-      // Transformar datos de distribución
-      if (distribucion && Array.isArray(distribucion) && distribucion.length > 0) {
-        setDistribucionData(distribucion);
-      } else {
-        setDistribucionData([]);
+      setLoadingEstadisticas(true);
+      
+      // Cargar KPIs de votantes
+      try {
+        const kpis = await obtenerKPIsVotantes();
+        setEstadisticas({
+          mesasProcesadas: kpis.participacion || 0, // Usar participación como % de mesas procesadas
+          votantesRegistrados: kpis.totalVotantes || 0,
+          participacion: kpis.participacion || 0,
+          incidencias: 0, // Este endpoint no existe aún, mantener en 0
+        });
+      } catch (error) {
+        console.error("Error al cargar KPIs:", error);
+        // Mantener valores por defecto
       }
 
-      // Transformar datos de tendencia (API devuelve {label, value})
-      if (tendencia && Array.isArray(tendencia) && tendencia.length > 0) {
-        const tendenciaTransformada = tendencia.map((item) => ({
-          region: item.label || item.region || "",
-          participacion: item.value || item.participacion || 0,
+      // Cargar resultados por partido
+      let resultadosPartidoArray = [];
+      try {
+        const resultadosPartido = await obtenerResultadosPorPartido();
+        console.log("📊 Resultados por partido recibidos:", resultadosPartido);
+        resultadosPartidoArray = Array.isArray(resultadosPartido) ? resultadosPartido : [];
+        setResultadosPartidos(resultadosPartidoArray);
+      } catch (error) {
+        console.error("Error al cargar resultados por partido:", error);
+        setResultadosPartidos([]);
+      }
+
+      // Cargar participación por región
+      try {
+        const participacionRegion = await obtenerParticipacionPorRegion();
+        console.log("🗺️ Participación por región recibida:", participacionRegion);
+        const regionData = participacionRegion && typeof participacionRegion === 'object' ? participacionRegion : {};
+        
+        // Si hay resultados por partido, asignar el partido ganador a cada región que no tenga partido
+        if (resultadosPartidoArray.length > 0) {
+          const partidoGanador = resultadosPartidoArray[0]; // El primer partido es el que tiene más votos (ya viene ordenado)
+          
+          // Actualizar cada región con el partido ganador si no tiene partido asignado
+          Object.keys(regionData).forEach(region => {
+            if (regionData[region] && (!regionData[region].partido || regionData[region].partido === "Sin datos" || regionData[region].partido === "Sin partido" || regionData[region].partido === null)) {
+              regionData[region].partido = partidoGanador.partido || "Sin partido";
+              regionData[region].color = partidoGanador.color || regionData[region].color;
+            }
+          });
+        }
+        
+        setResultadosPorRegion(regionData);
+
+        // Transformar datos de participación por región para el gráfico de línea
+        const participacionRegionData = Object.entries(regionData).map(([region, data]) => ({
+          region,
+          participacion: (data && data.porcentaje) ? data.porcentaje : 0,
         }));
-        setParticipacionRegional(tendenciaTransformada);
-      } else {
+        
+        if (participacionRegionData.length > 0) {
+          setParticipacionRegional(participacionRegionData);
+        } else {
+          setParticipacionRegional([]);
+        }
+      } catch (error) {
+        console.error("Error al cargar participación por región:", error);
+        setResultadosPorRegion({});
         setParticipacionRegional([]);
       }
-    } catch (err) {
-      // Solo loguear errores que no sean 400 (datos no disponibles aún)
-      if (!err.message || !err.message.includes('400')) {
-        console.error("Error al cargar datos de gráficos:", err);
-      }
-      setDistribucionData([]);
-      setParticipacionRegional([]);
+    } catch (error) {
+      console.error("Error general al cargar datos del Dashboard:", error);
     } finally {
-      setLoadingGraficos(false);
+      setLoadingEstadisticas(false);
     }
   };
+
+  // Esta función ya no se usa directamente, los datos se cargan en cargarDatosDashboard
+  // Se mantiene por compatibilidad pero no se llama
+  const cargarDatosGraficos = async () => {
+    // Los datos de gráficos ahora se cargan desde cargarDatosDashboard
+    setDistribucionData([]); // Requiere idLimpio, mantener vacío
+  };
+
+  // Actualizar gráfico de participación cuando cambien los datos de región
+  useEffect(() => {
+    if (resultadosPorRegion && typeof resultadosPorRegion === 'object' && Object.keys(resultadosPorRegion).length > 0) {
+      try {
+        const participacionRegionData = Object.entries(resultadosPorRegion)
+          .filter(([region, data]) => region && data && typeof data === 'object')
+          .map(([region, data]) => ({
+            region,
+            participacion: (data.porcentaje !== undefined && data.porcentaje !== null) ? data.porcentaje : 0,
+          }));
+        
+        if (participacionRegionData.length > 0) {
+          setParticipacionRegional(participacionRegionData);
+        }
+      } catch (error) {
+        console.error("Error al transformar datos de participación regional:", error);
+      }
+    }
+  }, [resultadosPorRegion]);
 
   // Cargar GeoJSON de Perú
   useEffect(() => {
@@ -145,7 +216,8 @@ export default function Dashboard() {
 
     // Esperar un momento para asegurar que el contenedor tenga dimensiones
     const renderMap = () => {
-      const container = mapContainerRef.current;
+      try {
+        const container = mapContainerRef.current;
       if (!container) {
         return;
       }
@@ -280,18 +352,23 @@ export default function Dashboard() {
       const pathsUpdate = pathsEnter.merge(paths)
         .attr("d", path)
         .attr("fill", (d) => {
-          const regionName = getRegionName(d);
-          const regionData = resultadosPorRegion[regionName];
-          
-          if (selectedRegion === regionName) {
-            return regionData?.color || "#3b82f6";
+          try {
+            const regionName = getRegionName(d);
+            const regionData = resultadosPorRegion && resultadosPorRegion[regionName] ? resultadosPorRegion[regionName] : null;
+            
+            if (selectedRegion === regionName) {
+              return (regionData && regionData.color) ? regionData.color : "#3b82f6";
+            }
+            if (hoveredRegion === regionName) {
+              // Hacer el color más brillante al hacer hover
+              return (regionData && regionData.color) ? regionData.color : "#60a5fa";
+            }
+            // Color por defecto más visible
+            return (regionData && regionData.color) ? regionData.color : "#93c5fd";
+          } catch (error) {
+            console.error("Error al obtener color de región:", error);
+            return "#93c5fd";
           }
-          if (hoveredRegion === regionName) {
-            // Hacer el color más brillante al hacer hover
-            return regionData?.color || "#60a5fa";
-          }
-          // Color por defecto más visible
-          return regionData?.color || "#93c5fd";
         })
         .attr("stroke", (d) => {
           const regionName = getRegionName(d);
@@ -378,6 +455,10 @@ export default function Dashboard() {
             .style("display", "block")
             .text(regionName || "Sin nombre");
         });
+      } catch (error) {
+        console.error("Error al renderizar el mapa:", error);
+        setMapError("Error al renderizar el mapa. Por favor, recarga la página.");
+      }
     };
 
     // Ejecutar renderizado
@@ -421,7 +502,13 @@ export default function Dashboard() {
               <span className="text-xs font-medium opacity-90">Procesamiento</span>
             </div>
             <h3 className="text-sm font-medium opacity-90 mb-1">Mesas Procesadas</h3>
-            <p className="text-3xl font-bold">{estadisticas.mesasProcesadas > 0 ? estadisticas.mesasProcesadas.toFixed(2) : "0.00"}%</p>
+            {loadingEstadisticas ? (
+              <div className="animate-pulse">
+                <div className="h-9 bg-white/20 rounded w-24"></div>
+              </div>
+            ) : (
+              <p className="text-3xl font-bold">{estadisticas.mesasProcesadas > 0 ? estadisticas.mesasProcesadas.toFixed(2) : "0.00"}%</p>
+            )}
             <div className="mt-4 flex items-center gap-2 text-xs opacity-80">
               <span className="inline-flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
@@ -447,7 +534,19 @@ export default function Dashboard() {
               <span className="text-xs font-medium opacity-90">Registro</span>
             </div>
             <h3 className="text-sm font-medium opacity-90 mb-1">Votantes Registrados</h3>
-            <p className="text-3xl font-bold">{estadisticas.votantesRegistrados > 0 ? (estadisticas.votantesRegistrados / 1000000).toFixed(1) : "0.0"}M</p>
+            {loadingEstadisticas ? (
+              <div className="animate-pulse">
+                <div className="h-9 bg-white/20 rounded w-24"></div>
+              </div>
+            ) : (
+              <p className="text-3xl font-bold">
+                {estadisticas.votantesRegistrados >= 1000000 
+                  ? (estadisticas.votantesRegistrados / 1000000).toFixed(1) + "M"
+                  : estadisticas.votantesRegistrados >= 1000
+                  ? (estadisticas.votantesRegistrados / 1000).toFixed(1) + "K"
+                  : estadisticas.votantesRegistrados.toLocaleString('es-PE')}
+              </p>
+            )}
             <div className="mt-4 flex items-center gap-2 text-xs opacity-80">
               <span className="inline-flex items-center gap-1">
                 <Users className="w-3 h-3" />
@@ -473,11 +572,17 @@ export default function Dashboard() {
               <span className="text-xs font-medium opacity-90">Participación</span>
             </div>
             <h3 className="text-sm font-medium opacity-90 mb-1">Participación Actual</h3>
-            <p className="text-3xl font-bold">{estadisticas.participacion > 0 ? estadisticas.participacion.toFixed(2) : "0.00"}%</p>
+            {loadingEstadisticas ? (
+              <div className="animate-pulse">
+                <div className="h-9 bg-white/20 rounded w-24"></div>
+              </div>
+            ) : (
+              <p className="text-3xl font-bold">{estadisticas.participacion > 0 ? estadisticas.participacion.toFixed(2) : "0.00"}%</p>
+            )}
             <div className="mt-4 flex items-center gap-2 text-xs opacity-80">
               <span className="inline-flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
-                +2.3% vs anterior
+                Tiempo real
               </span>
             </div>
           </div>
@@ -499,7 +604,13 @@ export default function Dashboard() {
               <span className="text-xs font-medium opacity-90">Alertas</span>
             </div>
             <h3 className="text-sm font-medium opacity-90 mb-1">Incidencias Reportadas</h3>
-            <p className="text-3xl font-bold">{estadisticas.incidencias || 0}</p>
+            {loadingEstadisticas ? (
+              <div className="animate-pulse">
+                <div className="h-9 bg-white/20 rounded w-16"></div>
+              </div>
+            ) : (
+              <p className="text-3xl font-bold">{estadisticas.incidencias || 0}</p>
+            )}
             <div className="mt-4 flex items-center gap-2 text-xs opacity-80">
               <span className="inline-flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
@@ -529,27 +640,40 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="w-full h-80" style={{ minHeight: '320px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={resultadosPartidos.length > 0 ? resultadosPartidos : []} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                <XAxis dataKey="partido" tick={{ fill: "#4B5563", fontSize: 12 }} />
-                <YAxis hide />
-                <Tooltip 
-                  formatter={(v) => `${v}%`} 
-                  labelFormatter={(n) => `Partido: ${n}`}
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb', 
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Bar dataKey="porcentaje" radius={[8, 8, 0, 0]}>
-                  {(resultadosPartidos.length > 0 ? resultadosPartidos : []).map((p, i) => (
-                    <cell key={i} fill={p.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {loadingEstadisticas ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Cargando datos...</p>
+                </div>
+              </div>
+            ) : resultadosPartidos.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={resultadosPartidos} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                  <XAxis dataKey="partido" tick={{ fill: "#4B5563", fontSize: 12 }} />
+                  <YAxis hide />
+                  <Tooltip 
+                    formatter={(v) => `${v}%`} 
+                    labelFormatter={(n) => `Partido: ${n}`}
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Bar dataKey="porcentaje" radius={[8, 8, 0, 0]}>
+                    {resultadosPartidos.map((p, i) => (
+                      <Cell key={i} fill={p.color || `#${Math.floor(Math.random()*16777215).toString(16)}`} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No hay datos disponibles
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -622,7 +746,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Distribución Geográfica</h2>
-            <p className="text-sm text-gray-500 mt-1">Resultados por región (simulado)</p>
+            <p className="text-sm text-gray-500 mt-1">Resultados por región</p>
           </div>
           <div className="p-2 bg-purple-50 rounded-lg">
             <MapPin className="w-5 h-5 text-purple-600" />
@@ -684,18 +808,20 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-4 h-4 rounded flex-shrink-0"
-                          style={{ backgroundColor: resultadosPorRegion[hoveredRegion].color }}
+                          style={{ backgroundColor: resultadosPorRegion[hoveredRegion]?.color || '#93c5fd' }}
                         />
                         <span className="text-sm font-semibold text-gray-700">
-                          {resultadosPorRegion[hoveredRegion].partido}
+                          {resultadosPorRegion[hoveredRegion]?.partido || 'Sin partido'}
                         </span>
                       </div>
                       <div className="pt-2 border-t border-gray-200">
                         <p className="text-sm font-bold text-gray-900">
-                          {resultadosPorRegion[hoveredRegion].porcentaje}% de votos
+                          {(resultadosPorRegion[hoveredRegion]?.porcentaje || 0).toFixed(2)}% de votos
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
-                          {resultadosPorRegion[hoveredRegion].votos.toLocaleString('es-PE')} votos totales
+                          {((resultadosPorRegion[hoveredRegion]?.votos || 0) > 0 
+                            ? resultadosPorRegion[hoveredRegion].votos.toLocaleString('es-PE') 
+                            : '0')} votos totales
                         </p>
                       </div>
                     </div>
@@ -724,33 +850,37 @@ export default function Dashboard() {
             </p>
             <div className="space-y-2">
               {Object.keys(resultadosPorRegion).length > 0 ? (
-                Object.entries(resultadosPorRegion).map(([region, data]) => (
-                  <div
-                    key={region}
-                    className={`p-3 rounded-lg border transition-all ${
-                      selectedRegion === region
-                        ? 'border-blue-500 bg-blue-50'
-                        : hoveredRegion === region
-                        ? 'border-blue-300 bg-blue-50'
-                        : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold text-sm text-gray-900">{region}</h4>
-                      <span className="text-xs font-bold text-gray-600">{data.porcentaje}%</span>
+                Object.entries(resultadosPorRegion)
+                  .filter(([region, data]) => region && data && typeof data === 'object')
+                  .map(([region, data]) => (
+                    <div
+                      key={region}
+                      className={`p-3 rounded-lg border transition-all ${
+                        selectedRegion === region
+                          ? 'border-blue-500 bg-blue-50'
+                          : hoveredRegion === region
+                          ? 'border-blue-300 bg-blue-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-sm text-gray-900">{region || 'Sin nombre'}</h4>
+                        <span className="text-xs font-bold text-gray-600">{(data?.porcentaje || 0).toFixed(2)}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded"
+                          style={{ backgroundColor: data?.color || '#93c5fd' }}
+                        />
+                        <span className="text-xs text-gray-600">{data?.partido || 'Sin partido'}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {((data?.votos || 0) > 0 
+                          ? data.votos.toLocaleString('es-PE') 
+                          : '0')} votos
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded"
-                        style={{ backgroundColor: data.color }}
-                      />
-                      <span className="text-xs text-gray-600">{data.partido}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {data.votos.toLocaleString('es-PE')} votos
-                    </p>
-                  </div>
-                ))
+                  ))
               ) : (
                 <p className="text-sm text-gray-500 text-center py-4">No hay datos de resultados por región disponibles</p>
               )}

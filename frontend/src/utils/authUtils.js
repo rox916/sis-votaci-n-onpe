@@ -12,39 +12,9 @@ export const obtenerPermisosDeRol = (nombreRol) => {
   try {
     const rolesStored = localStorage.getItem("roles");
     if (!rolesStored) {
-      // Si no hay roles en localStorage, usar los iniciales
-      const initialRoles = [
-        {
-          id: 1,
-          nombre: "Super Admin",
-          descripcion: "Acceso total al sistema y configuración global.",
-          permisos: ["Dashboard", "Usuarios", "Candidatos", "Centros", "Padrón Electoral", "Resultados", "Configuración", "Auditoría", "Análisis de Datos", "Reportes"],
-          estado: "Activo",
-        },
-        {
-          id: 2,
-          nombre: "Admin Regional",
-          descripcion: "Gestiona centros y resultados dentro de su región.",
-          permisos: ["Dashboard", "Centros", "Resultados", "Reportes"],
-          estado: "Activo",
-        },
-        {
-          id: 3,
-          nombre: "Presidente de Mesa",
-          descripcion: "Registra y valida los resultados de mesa electoral.",
-          permisos: ["Dashboard", "Resultados"],
-          estado: "Activo",
-        },
-        {
-          id: 4,
-          nombre: "Soporte Técnico",
-          descripcion: "Da soporte al sistema y usuarios regionales.",
-          permisos: ["Dashboard", "Usuarios", "Reportes"],
-          estado: "Inactivo",
-        },
-      ];
-      const rol = initialRoles.find((r) => r.nombre === nombreRol);
-      return rol ? rol.permisos : [];
+      // Si no hay roles en localStorage, retornar array vacío
+      // Los roles deben ser creados desde el panel de administración
+      return [];
     }
 
     const roles = JSON.parse(rolesStored);
@@ -134,4 +104,5 @@ export const MAPEO_RUTA_PERMISO = {
 export const obtenerPermisoDeRuta = (ruta) => {
   return MAPEO_RUTA_PERMISO[ruta] || null;
 };
+
 

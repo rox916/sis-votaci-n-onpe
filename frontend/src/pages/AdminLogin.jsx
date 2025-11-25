@@ -9,6 +9,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { obtenerPermisosDeRol } from "../utils/authUtils";
+import { registrarExito, registrarError } from "../services/auditoriaService";
 
 export default function AdminLogin() {
   const [usuario, setUsuario] = useState("");
@@ -24,36 +25,8 @@ export default function AdminLogin() {
       if (usuariosStored) {
         return JSON.parse(usuariosStored);
       }
-      // Si no hay usuarios, usar los iniciales
-      return [
-        {
-          id: 1,
-          nombre: "Juan Pérez",
-          dni: "12345678",
-          email: "juan.perez@onpe.gob.pe",
-          rol: "Super Admin",
-          departamento: "Lima",
-          estado: "Activo",
-        },
-        {
-          id: 2,
-          nombre: "María García",
-          dni: "87654321",
-          email: "maria.garcia@onpe.gob.pe",
-          rol: "Admin Regional",
-          departamento: "Cusco",
-          estado: "Activo",
-        },
-        {
-          id: 3,
-          nombre: "Carlos López",
-          dni: "11223344",
-          email: "carlos.lopez@onpe.gob.pe",
-          rol: "Presidente de Mesa",
-          departamento: "Arequipa",
-          estado: "Activo",
-        },
-      ];
+      // Si no hay usuarios, retornar array vacío
+      return [];
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
       return [];
@@ -77,6 +50,9 @@ export default function AdminLogin() {
       );
 
       if (usuarioEncontrado) {
+        // Verificar contraseña (si existe en el modelo)
+        // Por ahora, solo verificamos que el usuario exista y esté activo
+        
         // Obtener permisos del rol
         const permisos = obtenerPermisosDeRol(usuarioEncontrado.rol);
         
@@ -86,8 +62,29 @@ export default function AdminLogin() {
         localStorage.setItem("adminRol", usuarioEncontrado.rol);
         localStorage.setItem("adminPermisos", JSON.stringify(permisos));
         
+        // Guardar datos de autenticación para auditoría
+        localStorage.setItem("authData", JSON.stringify({
+          usuario: usuarioEncontrado.nombre || usuarioEncontrado.email,
+          username: usuarioEncontrado.email || usuarioEncontrado.dni,
+          rol: usuarioEncontrado.rol
+        }));
+        
+        // Registrar login exitoso en auditoría
+        registrarExito(
+          "Inicio de Sesión",
+          `Usuario ${usuarioEncontrado.nombre || usuarioEncontrado.email} inició sesión exitosamente`,
+          { usuarioId: usuarioEncontrado.id, rol: usuarioEncontrado.rol }
+        );
+        
         navigate("/admin");
       } else {
+        // Registrar intento de login fallido
+        registrarError(
+          "Intento de Inicio de Sesión",
+          `Intento de login fallido con usuario: ${usuario}`,
+          { usuario: usuario }
+        );
+        
         setError("Usuario no encontrado o inactivo");
         setLoading(false);
       }
@@ -209,15 +206,10 @@ export default function AdminLogin() {
             </div>
           </div>
 
-          {/* Nota de usuarios de prueba */}
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
-              Usuarios de prueba: juan.perez@onpe.gob.pe, maria.garcia@onpe.gob.pe, carlos.lopez@onpe.gob.pe
-            </p>
-          </div>
         </div>
       </motion.div>
     </div>
   );
 }
+
 

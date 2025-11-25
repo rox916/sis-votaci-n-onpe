@@ -15,6 +15,7 @@ import {
   actualizarPartido,
   eliminarPartido
 } from "../../../services/partidosService";
+import { registrarExito, registrarError } from "../../../services/auditoriaService";
 import { obtenerPartidosDesdeAPI } from "../../../services/candidatosService";
 import { getLogoPartido, getPartidoSimbolo } from "./utils/candidatosUtils";
 import { PARTIDOS_POLITICOS } from "../../../constants/electoralConstants";
@@ -77,9 +78,18 @@ export default function Candidatos() {
       });
       setPartidos([...partidos, partidoCreado]);
       setModalPartidoCreate(false);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Crear Partido Político",
+        `Partido creado: ${data.nombre} (${data.abreviatura})`,
+        { partidoId: partidoCreado.idPartido || partidoCreado.id, nombre: data.nombre }
+      );
+      
       alert("Partido creado exitosamente.");
     } catch (error) {
       console.error("Error al crear partido:", error);
+      registrarError("Crear Partido Político", `Error al crear partido: ${error.message}`);
       alert(`Error al crear partido: ${error.message}`);
     } finally {
       setLoadingPartidos(false);
@@ -100,9 +110,18 @@ export default function Candidatos() {
         return pId === partidoId ? partidoActualizado : p;
       }));
       setModalPartidoEdit(false);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Editar Partido Político",
+        `Partido editado: ${data.nombre} (ID: ${partidoId})`,
+        { partidoId: partidoId, nombre: data.nombre }
+      );
+      
       alert("Partido actualizado exitosamente.");
     } catch (error) {
       console.error("Error al actualizar partido:", error);
+      registrarError("Editar Partido Político", `Error al editar partido: ${error.message}`);
       alert(`Error al actualizar partido: ${error.message}`);
     } finally {
       setLoadingPartidos(false);
@@ -125,9 +144,18 @@ export default function Candidatos() {
         return pId !== partidoId;
       }));
       setModalPartidoDelete(false);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Eliminar Partido Político",
+        `Partido eliminado: ${selectedPartido.nombre} (ID: ${partidoId})`,
+        { partidoId: partidoId, nombre: selectedPartido.nombre }
+      );
+      
       alert("Partido eliminado exitosamente.");
     } catch (error) {
       console.error("Error al eliminar partido:", error);
+      registrarError("Eliminar Partido Político", `Error al eliminar partido: ${error.message}`);
       alert(`Error al eliminar partido: ${error.message}`);
     } finally {
       setLoadingPartidos(false);

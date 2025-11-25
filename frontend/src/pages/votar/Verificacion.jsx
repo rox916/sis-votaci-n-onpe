@@ -120,7 +120,7 @@ export default function Verificacion() {
 
   const verificarDNI = async () => {
     if (!dni || dni.length < 8) {
-      setError("Debe ingresar un DNI válido");
+      setError("Debe ingresar un DNI válido de 8 dígitos");
       return;
     }
 
@@ -128,11 +128,16 @@ export default function Verificacion() {
     setError("");
 
     try {
+      // Consultar el DNI en el padrón electoral
+      console.log('🔍 Consultando DNI en padrón electoral...');
       const datosVotante = await consultarVotantePorDni(dni);
+      console.log('✅ Votante encontrado en padrón:', datosVotante);
+      
       setVotante(datosVotante);
       setStep(2);
     } catch (err) {
-      setError(err.message || "Error al consultar el DNI");
+      console.error('❌ Error en el proceso de verificación:', err);
+      setError(err.message || "Error al consultar el DNI. Verifique que el DNI esté registrado en el padrón electoral.");
       setVotante(null);
     } finally {
       setLoading(false);
@@ -285,6 +290,7 @@ export default function Verificacion() {
                   </div>
                 </div>
 
+
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -341,11 +347,15 @@ export default function Verificacion() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Nombres</p>
-                    <p className="text-lg font-bold text-blue-900">{votante.nombres}</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {votante.nombres || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Apellidos</p>
-                    <p className="text-lg font-bold text-blue-900">{votante.apellidos}</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {votante.apellidos || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Fecha de Nacimiento</p>

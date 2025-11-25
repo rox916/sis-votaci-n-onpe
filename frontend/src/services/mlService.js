@@ -23,8 +23,8 @@ export const entrenarModelo = async (idLimpio) => {
 /**
  * Obtiene las predicciones del modelo entrenado
  * @param {number} idLimpio - ID del dataset limpio usado para entrenar
- * @returns {Promise<Array>} Lista de partidos con sus probabilidades
- * Formato esperado: [{ partido: string, probabilidad: number }, ...]
+ * @returns {Promise<Array>} Lista de PartidoPredictionDTO del backend
+ * Formato: [{ partido: string, prediccion: number, confianza: number, estado: string }, ...]
  */
 export const obtenerPredicciones = async (idLimpio) => {
   if (!idLimpio) {

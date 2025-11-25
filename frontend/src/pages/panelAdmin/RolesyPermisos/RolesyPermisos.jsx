@@ -6,48 +6,15 @@ import RolCrear from "./RolCrear";
 import RolEditar from "./RolEditar";
 import RolEliminar from "./RolEliminar";
 
-// Datos iniciales simulados
-const initialRoles = [
-  {
-    id: 1,
-    nombre: "Super Admin",
-    descripcion: "Acceso total al sistema y configuración global.",
-    permisos: ["Dashboard", "Usuarios", "Candidatos", "Centros", "Padrón Electoral", "Resultados", "Configuración", "Auditoría", "Análisis de Datos", "Reportes"],
-    estado: "Activo",
-  },
-  {
-    id: 2,
-    nombre: "Admin Regional",
-    descripcion: "Gestiona centros y resultados dentro de su región.",
-    permisos: ["Dashboard", "Centros", "Resultados", "Reportes"],
-    estado: "Activo",
-  },
-  {
-    id: 3,
-    nombre: "Presidente de Mesa",
-    descripcion: "Registra y valida los resultados de mesa electoral.",
-    permisos: ["Dashboard", "Resultados"],
-    estado: "Activo",
-  },
-  {
-    id: 4,
-    nombre: "Soporte Técnico",
-    descripcion: "Da soporte al sistema y usuarios regionales.",
-    permisos: ["Dashboard", "Usuarios", "Reportes"],
-    estado: "Inactivo",
-  },
-];
-
 export default function RolesyPermisos() {
-  // Cargar roles desde localStorage o usar datos iniciales
+  // Cargar roles desde localStorage o usar array vacío
   const [roles, setRoles] = useState(() => {
     const stored = localStorage.getItem("roles");
     if (stored) {
       return JSON.parse(stored);
     }
-    // Si no hay roles guardados, guardar los iniciales
-    localStorage.setItem("roles", JSON.stringify(initialRoles));
-    return initialRoles;
+    // Si no hay roles guardados, usar array vacío
+    return [];
   });
 
   // Guardar en localStorage cuando cambien los roles

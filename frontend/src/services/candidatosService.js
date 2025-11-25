@@ -576,6 +576,11 @@ export const fetchCandidatosParaVotacion = async () => {
 
     console.log("Presidenciales (raw):", presidenciales);
     console.log("Congresistas (raw):", congresistas);
+    console.log("Congresistas count:", congresistas?.length || 0);
+    if (congresistas && congresistas.length > 0) {
+      console.log("Primer congresista (ejemplo):", congresistas[0]);
+      console.log("PartidoPolitico del primer congresista:", congresistas[0].partidoPolitico);
+    }
     console.log("Andinos (raw):", andinos);
 
     // 2. Transformar Presidentes (ACTUALIZADO CON PLANCHA)
@@ -618,28 +623,30 @@ export const fetchCandidatosParaVotacion = async () => {
 
     // Transformar congresistas: modelo Congresista (nombres, apellidos, id, fotoUrl, region, partidoPolitico)
     const congresistasTransform = (congresistas || []).map((c) => {
-  const nombreCompleto = `${c.nombres || ""} ${c.apellidos || ""}`.trim();
-  
-  // CORRECCIÓN: Leemos directo lo que manda Java, ya no calculamos nada
-  const partidoNombre = c.nombrePartido || "Sin partido";
+      const nombreCompleto = `${c.nombres || ""} ${c.apellidos || ""}`.trim();
+      
+      // CORRECCIÓN: Acceder al objeto partidoPolitico anidado (como en ParlamentoAndino)
+      const idPartido = c.partidoPolitico?.idPartido || c.partidoPolitico?.id || null;
+      const partidoNombre = c.partidoPolitico?.nombre || (idPartido ? (partidosMap[idPartido] || "Sin partido") : "Sin partido");
+      const partidoSimbolo = c.partidoPolitico?.simbolo || "";
 
-  return {
-    id: c.id,
-    nombre: nombreCompleto,
-    nombreCompleto: nombreCompleto,
-    
-    partido: c.idPartido,
-    partidoNombre: partidoNombre, // <--- Aquí ya viene el nombre correcto
-    imagenPartido: c.imagenPartido, // <--- AQUÍ ESTÁ LA FOTO QUE FALTABA
-    partidoSimbolo: c.imagenPartido, // Por si acaso tu frontend lo busca con este nombre
-    
-    numero: c.numeroEnLista || 0,
-    foto: c.fotoUrl || '',
-    distrito: c.region || 'N/D',
-    propuestas: Array.isArray(c.propuestas) ? c.propuestas : [],
-    biografia: c.biografia || '',
-  };
-});
+      return {
+        id: c.id,
+        nombre: nombreCompleto,
+        nombreCompleto: nombreCompleto,
+        
+        partido: idPartido,
+        partidoNombre: partidoNombre,
+        imagenPartido: partidoSimbolo,
+        partidoSimbolo: partidoSimbolo,
+        
+        numero: c.numeroEnLista || 0,
+        foto: c.fotoUrl || '',
+        distrito: c.region || 'N/D',
+        propuestas: Array.isArray(c.propuestas) ? c.propuestas : [],
+        biografia: c.biografia || '',
+      };
+    });
     console.log("Congresistas transformados:", congresistasTransform);
 
     // Transformar parlamentarios andinos: modelo ParlamentoAndino (nombres, apellidos, id, fotoUrl, partidoPolitico)

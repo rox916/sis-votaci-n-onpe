@@ -6,52 +6,13 @@ import { ROLES_USUARIO, DEPARTAMENTOS_PERU } from "../../../constants/electoralC
 import UsuarioCrear from "./UsuarioCrear";
 import UsuarioEditar from "./UsuarioEditar";
 import UsuarioEliminar from "./UsuarioEliminar";
-
-// Datos iniciales de usuarios administrativos
-const initialUsuarios = [
-  {
-    id: 1,
-    nombre: "Juan Pérez",
-    dni: "12345678",
-    email: "juan.perez@onpe.gob.pe",
-    rol: "Super Admin",
-    departamento: "Lima",
-    estado: "Activo",
-  },
-  {
-    id: 2,
-    nombre: "María García",
-    dni: "87654321",
-    email: "maria.garcia@onpe.gob.pe",
-    rol: "Admin Regional",
-    departamento: "Cusco",
-    estado: "Activo",
-  },
-  {
-    id: 3,
-    nombre: "Carlos López",
-    dni: "11223344",
-    email: "carlos.lopez@onpe.gob.pe",
-    rol: "Presidente de Mesa",
-    departamento: "Arequipa",
-    estado: "Activo",
-  },
-  {
-    id: 4,
-    nombre: "Ana Martínez",
-    dni: "44332211",
-    email: "ana.martinez@onpe.gob.pe",
-    rol: "Soporte Técnico",
-    departamento: "Lima",
-    estado: "Inactivo",
-  },
-];
+import { registrarExito, registrarError } from "../../../services/auditoriaService";
 
 export default function Usuarios() {
-  // Cargar usuarios desde localStorage o usar datos iniciales
+  // Cargar usuarios desde localStorage o usar array vacío
   const [usuarios, setUsuarios] = useState(() => {
     const stored = localStorage.getItem("usuarios");
-    return stored ? JSON.parse(stored) : initialUsuarios;
+    return stored ? JSON.parse(stored) : [];
   });
 
   // Guardar en localStorage cuando cambien los usuarios
@@ -81,20 +42,60 @@ export default function Usuarios() {
 
   // Acciones CRUD
   const handleCreate = (data) => {
-    setUsuarios([...usuarios, { ...data, id: Date.now() }]);
-    setModalCreate(false);
+    try {
+      const nuevoUsuario = { ...data, id: Date.now() };
+      setUsuarios([...usuarios, nuevoUsuario]);
+      setModalCreate(false);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Crear Usuario",
+        `Usuario creado: ${data.nombre} (${data.email}) con rol ${data.rol}`,
+        { usuarioId: nuevoUsuario.id, email: data.email, rol: data.rol }
+      );
+    } catch (error) {
+      registrarError("Crear Usuario", `Error al crear usuario: ${error.message}`);
+    }
   };
 
   const handleEdit = (data) => {
-    setUsuarios(usuarios.map((u) => (u.id === data.id ? data : u)));
-    setModalEdit(false);
-    setSelectedUser(null);
+    try {
+      const usuarioAnterior = usuarios.find(u => u.id === data.id);
+      setUsuarios(usuarios.map((u) => (u.id === data.id ? data : u)));
+      setModalEdit(false);
+      setSelectedUser(null);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Editar Usuario",
+        `Usuario editado: ${data.nombre} (${data.email}). Cambios: ${JSON.stringify({
+          rol: usuarioAnterior?.rol !== data.rol ? `${usuarioAnterior?.rol} → ${data.rol}` : undefined,
+          estado: usuarioAnterior?.estado !== data.estado ? `${usuarioAnterior?.estado} → ${data.estado}` : undefined,
+        })}`,
+        { usuarioId: data.id, email: data.email }
+      );
+    } catch (error) {
+      registrarError("Editar Usuario", `Error al editar usuario: ${error.message}`);
+    }
   };
 
   const handleDelete = () => {
-    setUsuarios(usuarios.filter((u) => u.id !== selectedUser.id));
-    setModalDelete(false);
-    setSelectedUser(null);
+    try {
+      const usuarioEliminado = selectedUser;
+      setUsuarios(usuarios.filter((u) => u.id !== selectedUser.id));
+      setModalDelete(false);
+      
+      // Registrar en auditoría
+      registrarExito(
+        "Eliminar Usuario",
+        `Usuario eliminado: ${usuarioEliminado.nombre} (${usuarioEliminado.email})`,
+        { usuarioId: usuarioEliminado.id, email: usuarioEliminado.email }
+      );
+      
+      setSelectedUser(null);
+    } catch (error) {
+      registrarError("Eliminar Usuario", `Error al eliminar usuario: ${error.message}`);
+    }
   };
 
   return (

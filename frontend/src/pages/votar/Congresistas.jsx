@@ -128,10 +128,27 @@ export default function Congresistas({
     }
   };
 
+  // Debug: Ver qué candidatos estamos recibiendo
+  useEffect(() => {
+    console.log("=== Congresistas.jsx: Candidatos recibidos ===", candidatos);
+    console.log("=== Cantidad de candidatos ===", candidatos?.length || 0);
+    if (candidatos && candidatos.length > 0) {
+      console.log("=== Primer candidato (ejemplo) ===", candidatos[0]);
+    }
+  }, [candidatos]);
+
   // Filtrar candidatos: Comparamos el ID del partido seleccionado con el ID del partido del candidato
   const candidatosVisibles = partidoSeleccionado 
-    ? candidatos.filter(c => c.partido === partidoSeleccionado.idPartido)
+    ? candidatos.filter(c => {
+        const match = c.partido === partidoSeleccionado.idPartido;
+        if (partidoSeleccionado && !match) {
+          console.log(`Candidato ${c.nombre} - partido ID: ${c.partido}, buscando: ${partidoSeleccionado.idPartido}`);
+        }
+        return match;
+      })
     : [];
+  
+  console.log("=== Candidatos visibles para partido seleccionado ===", candidatosVisibles.length, partidoSeleccionado?.nombre);
 
   const fadeUp = {
     hidden: { opacity: 0, y: 20 },
