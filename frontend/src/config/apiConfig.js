@@ -29,6 +29,7 @@ export const API_BASE_URL = resolveApiBaseUrl();
 // Configuración de headers por defecto
 export const defaultHeaders = {
   "Content-Type": "application/json",
+  "ngrok-skip-browser-warning": "true",
   // Aquí puedes agregar tokens de autenticación si es necesario
   // "Authorization": `Bearer ${token}`
 };
