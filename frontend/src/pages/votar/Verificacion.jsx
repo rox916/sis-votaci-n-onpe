@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 // Importamos useNavigate
 import { useNavigate } from "react-router-dom";
 // Importamos la imagen del mapa
-import mapaPeruImg from "../../assets/images/mapa-peru-3d.png";
+<img src="/images/mapa-peru-3d.png" alt="Mapa del Perú" />
 // Importamos el servicio de votantes
 import { 
   consultarVotantePorDni, 

@@ -1,17 +1,9 @@
-// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import { Calendar, Users, Building2, Vote, FileSearch, CheckCircle2, Zap, Shield, Eye } from "lucide-react";
 
-// --- Importamos FOTOS y LOGOS ---
-import fotoRLA from "../assets/images/rafael_lopez_aliaga.jpg";
-import fotoKeiko from "../assets/images/keiko_fujimori.jpg";
-import fotoAcuna from "../assets/images/cesar_acuna.jpg";
-import fotoAlvarez from "../assets/images/carlos_alvarez.jpg";
-import fotoLopezChau from "../assets/images/alfonso_lopez_chau.jpg";
-import fotoButters from "../assets/images/phillip_butters.jpg";
-import fotoPerezTello from "../assets/images/marisol_perez_tello.jpg";
-import fotoJulioChavez from "../assets/images/Julio_Chavez.jpg";
+// --- YA NO IMPORTAMOS LAS FOTOS DE CANDIDATOS (Ahora las lee directo de public) ---
 
+// --- LOGOS (Estos se quedan igual si siguen en src/assets/logos) ---
 import logoRenovacion from "../assets/logos/renovacion_popular.png";
 import logoFuerza from "../assets/logos/fuerza_popular.png";
 import logoAPP from "../assets/logos/app.png";
@@ -27,56 +19,56 @@ export default function Home() {
       id: 0,
       nombre: "Julio Chávez",
       partido: "ACCIÓN POPULAR",
-      image: fotoJulioChavez,
+      image: "/images/Julio_Chavez.jpg", // <--- CAMBIO AQUÍ: Ruta de texto
       logoPartido: logoAccionPopular 
     },
     {
       id: 1,
       nombre: "Rafael López Aliaga",
       partido: "RENOVACIÓN POPULAR",
-      image: fotoRLA,
+      image: "/images/rafael_lopez_aliaga.jpg", // <--- CAMBIO AQUÍ
       logoPartido: logoRenovacion 
     },
     {
       id: 2,
       nombre: "Keiko Fujimori",
       partido: "FUERZA POPULAR",
-      image: fotoKeiko,
+      image: "/images/keiko_fujimori.jpg", // <--- CAMBIO AQUÍ
       logoPartido: logoFuerza
     },
     {
       id: 3,
       nombre: "César Acuña",
       partido: "ALIANZA PARA EL PROGRESO",
-      image: fotoAcuna,
+      image: "/images/cesar_acuna.jpg", // <--- CAMBIO AQUÍ
       logoPartido: logoAPP
     },
     {
       id: 4,
       nombre: "Carlos Álvarez",
       partido: "PAÍS PARA TODOS",
-      image: fotoAlvarez,
+      image: "/images/carlos_alvarez.jpg", // <--- CAMBIO AQUÍ
       logoPartido: logoPaisTodos
     },
     {
       id: 5,
       nombre: "Alfonso López Chau",
       partido: "AHORA NACIÓN",
-      image: fotoLopezChau,
+      image: "/images/alfonso_lopez_chau.jpg", // <--- CAMBIO AQUÍ
       logoPartido: logoAhoraNacion
     },
     {
       id: 6,
       nombre: "Phillip Butters",
       partido: "AVANZA PAÍS",
-      image: fotoButters,
+      image: "/images/phillip_butters.jpg", // <--- CAMBIO AQUÍ
       logoPartido: logoAvanza
     },
     {
       id: 7,
       nombre: "Marisol Pérez Tello",
       partido: "PRIMERO LA GENTE",
-      image: fotoPerezTello,
+      image: "/images/marisol_perez_tello.jpg", // <--- CAMBIO AQUÍ
       logoPartido: logoPrimeroGente
     },
   ];

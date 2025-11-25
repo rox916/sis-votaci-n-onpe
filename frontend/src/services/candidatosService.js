@@ -578,23 +578,39 @@ export const fetchCandidatosParaVotacion = async () => {
     console.log("Congresistas (raw):", congresistas);
     console.log("Andinos (raw):", andinos);
 
-    // Transformar presidentes: modelo Presidente (nombres, apellidos, id, fotoUrl, partidoPolitico)
+    // 2. Transformar Presidentes (ACTUALIZADO CON PLANCHA)
     const presTransform = (presidenciales || []).map((pres) => {
-      const nombreCompleto = `${pres.nombres || ""} ${pres.apellidos || ""}`.trim();
-      const idPartido = pres.partidoPolitico?.idPartido || pres.partidoPolitico?.id || null;
-      const partidoNombre = idPartido ? (partidosMap[idPartido] || "Sin partido") : "Sin partido";
-      
+      const nombreCompleto = pres.nombres 
+        ? `${pres.nombres} ${pres.apellidos || ""}`.trim() 
+        : (pres.nombre || "Candidato");
+
+      const nombrePartido = pres.nombrePartido || pres.partidoPolitico?.nombre || "Sin partido";
+      const logoPartido = pres.imagenPartido || pres.partidoPolitico?.simbolo || pres.partidoSimbolo || null;
+      const idPartido = pres.idPartido || pres.partidoPolitico?.idPartido || pres.partidoPolitico?.id;
+
       return {
         id: pres.id,
         nombre: nombreCompleto,
         nombreCompleto: nombreCompleto,
+        
+        // Datos del Partido
         partido: idPartido,
-        partidoNombre: partidoNombre,
-        partidoSimbolo: "", // Se puede obtener del partido si es necesario
-        numero: 0,
-        foto: pres.fotoUrl || '',
-        propuestas: Array.isArray(pres.propuestas) ? pres.propuestas : [],
+        partidoNombre: nombrePartido,
+        imagenPartido: logoPartido,
+        partidoSimbolo: logoPartido,
+        
+        // Datos del Candidato
+        foto: pres.fotoUrl || pres.foto || '',
         biografia: pres.biografia || '',
+        propuestas: Array.isArray(pres.propuestas) ? pres.propuestas : [],
+        
+        // --- NUEVOS DATOS PROFESIONALES ---
+        formacion: pres.formacionAcademica || "Información no registrada",
+        planGobierno: pres.planGobiernoUrl || null,
+        vice1: pres.primerVicepresidente || "No registrado",
+        vice2: pres.segundoVicepresidente || "No registrado",
+        
+        cargo: "Presidente" 
       };
     });
 
@@ -602,25 +618,28 @@ export const fetchCandidatosParaVotacion = async () => {
 
     // Transformar congresistas: modelo Congresista (nombres, apellidos, id, fotoUrl, region, partidoPolitico)
     const congresistasTransform = (congresistas || []).map((c) => {
-      const nombreCompleto = `${c.nombres || ""} ${c.apellidos || ""}`.trim();
-      const idPartido = c.partidoPolitico?.idPartido || c.partidoPolitico?.id || null;
-      const partidoNombre = idPartido ? (partidosMap[idPartido] || "Sin partido") : "Sin partido";
-      
-      return {
-        id: c.id,
-        nombre: nombreCompleto,
-        nombreCompleto: nombreCompleto,
-        partido: idPartido,
-        partidoNombre: partidoNombre,
-        partidoSimbolo: "",
-        numero: c.numeroEnLista || 0,
-        foto: c.fotoUrl || '',
-        distrito: c.region || 'N/D',
-        propuestas: Array.isArray(c.propuestas) ? c.propuestas : [],
-        biografia: c.biografia || '',
-      };
-    });
+  const nombreCompleto = `${c.nombres || ""} ${c.apellidos || ""}`.trim();
+  
+  // CORRECCIÓN: Leemos directo lo que manda Java, ya no calculamos nada
+  const partidoNombre = c.nombrePartido || "Sin partido";
 
+  return {
+    id: c.id,
+    nombre: nombreCompleto,
+    nombreCompleto: nombreCompleto,
+    
+    partido: c.idPartido,
+    partidoNombre: partidoNombre, // <--- Aquí ya viene el nombre correcto
+    imagenPartido: c.imagenPartido, // <--- AQUÍ ESTÁ LA FOTO QUE FALTABA
+    partidoSimbolo: c.imagenPartido, // Por si acaso tu frontend lo busca con este nombre
+    
+    numero: c.numeroEnLista || 0,
+    foto: c.fotoUrl || '',
+    distrito: c.region || 'N/D',
+    propuestas: Array.isArray(c.propuestas) ? c.propuestas : [],
+    biografia: c.biografia || '',
+  };
+});
     console.log("Congresistas transformados:", congresistasTransform);
 
     // Transformar parlamentarios andinos: modelo ParlamentoAndino (nombres, apellidos, id, fotoUrl, partidoPolitico)
